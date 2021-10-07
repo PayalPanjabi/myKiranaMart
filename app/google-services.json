@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "298729412437",
+    "project_id": "mykiranamart-1dc06",
+    "storage_bucket": "mykiranamart-1dc06.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:298729412437:android:0ba8057961378a53bd41dc",
+        "android_client_info": {
+          "package_name": "com.mykiranamart.user"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "298729412437-v6ltt8mf7tvl0nis8iqsbavr4va9414q.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mykiranamart.user",
+            "certificate_hash": "625a5d6e8d80c8022d0a7e29a4afffe2c955590b"
+          }
+        },
+        {
+          "client_id": "298729412437-9aos9174svjgthh208c8q65h7auifnl5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAL3wUralOrvh39BSVBmMfxigyyT-wZmwc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "298729412437-9aos9174svjgthh208c8q65h7auifnl5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
