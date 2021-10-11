@@ -1,9 +1,10 @@
 package com.mykiranamart.user.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-@SuppressWarnings("ALL")
-public class CartItems {
+
+public class CartItems implements Serializable {
 
     String id, product_id, type, measurement, measurement_unit_id, price, discounted_price, serve_for, stock, stock_unit_id, name, image, unit, tax_percentage, tax_title, isAvailable;
     ArrayList<String> other_images;

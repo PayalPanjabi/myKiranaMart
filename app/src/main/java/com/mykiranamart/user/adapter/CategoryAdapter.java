@@ -1,6 +1,5 @@
 package com.mykiranamart.user.adapter;
 
-import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -25,19 +24,17 @@ import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.model.Category;
 
 public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHolder> {
-    public final ArrayList<Category> categorylist;
+    public final ArrayList<Category> categoryList;
     final int layout;
-    final Activity activity;
     final Context context;
     final String from;
     final int visibleNumber;
 
 
-    public CategoryAdapter(Context context, Activity activity, ArrayList<Category> categorylist, int layout, String from, int visibleNumber) {
+    public CategoryAdapter(Context context, ArrayList<Category> categoryList, int layout, String from, int visibleNumber) {
         this.context = context;
-        this.categorylist = categorylist;
+        this.categoryList = categoryList;
         this.layout = layout;
-        this.activity = activity;
         this.from = from;
         this.visibleNumber = visibleNumber;
     }
@@ -49,11 +46,10 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHo
         return new ViewHolder(view);
     }
 
-    @NonNull
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder holder, int position) {
-        final Category model = categorylist.get(position);
-        holder.txttitle.setText(model.getName());
+        final Category model = categoryList.get(position);
+        holder.tvTitle.setText(model.getName());
 
         Picasso.get()
                 .load(model.getImage())
@@ -61,44 +57,41 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHo
                 .centerInside()
                 .placeholder(R.drawable.placeholder)
                 .error(R.drawable.placeholder)
-                .into(holder.imgcategory);
+                .into(holder.imgCategory);
 
-        holder.lytMain.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Fragment fragment = new SubCategoryFragment();
-                Bundle bundle = new Bundle();
-                bundle.putString(Constant.ID, model.getId());
-                bundle.putString(Constant.NAME, model.getName());
-                bundle.putString(Constant.FROM, "category");
-                fragment.setArguments(bundle);
-                ((AppCompatActivity) context).getSupportFragmentManager().beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
-            }
+        holder.lytMain.setOnClickListener(v -> {
+            Fragment fragment = new SubCategoryFragment();
+            Bundle bundle = new Bundle();
+            bundle.putString(Constant.ID, model.getId());
+            bundle.putString(Constant.NAME, model.getName());
+            bundle.putString(Constant.FROM, "category");
+            fragment.setArguments(bundle);
+            ((AppCompatActivity) context).getSupportFragmentManager().beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
         });
     }
 
     @Override
     public int getItemCount() {
         int categories;
-        if (categorylist.size() > visibleNumber && from.equals("home")) {
+        if (categoryList.size() > visibleNumber && from.equals("home")) {
             categories = visibleNumber;
         } else {
-            categories = categorylist.size();
+            categories = categoryList.size();
         }
         return categories;
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
 
-        public final TextView txttitle;
-        final ImageView imgcategory;
+        public final TextView tvTitle;
+        final ImageView imgCategory;
         final LinearLayout lytMain;
 
         public ViewHolder(View itemView) {
             super(itemView);
             lytMain = itemView.findViewById(R.id.lytMain);
-            imgcategory = itemView.findViewById(R.id.imgcategory);
-            txttitle = itemView.findViewById(R.id.txttitle);
+            imgCategory = itemView.findViewById(R.id.imgCategory);
+            tvTitle = itemView.findViewById(R.id.tvTitle);
         }
 
     }

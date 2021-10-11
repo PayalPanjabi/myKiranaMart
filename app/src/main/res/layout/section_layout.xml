@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/relativeLayout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@color/bg_color"
     android:layout_below="@+id/recyclerView"
     android:layout_marginTop="@dimen/_10sdp"
-    android:visibility="visible">
+    android:visibility="visible"
+    tools:ignore="Overdraw">
 
     <RelativeLayout
         android:id="@+id/titleLyt1"
@@ -19,6 +22,7 @@
             android:layout_marginStart="@dimen/_10sdp"
             android:layout_marginTop="@dimen/_10sdp"
             android:layout_toStartOf="@+id/tvMore"
+            android:textAlignment="viewStart"
             android:textColor="@color/colorPrimaryDark"
             android:textSize="@dimen/_12ssp"
             android:textStyle="bold" />
@@ -30,6 +34,7 @@
             android:layout_below="@+id/tvTitle"
             android:layout_marginStart="@dimen/_10sdp"
             android:layout_toStartOf="@+id/tvMore"
+            android:textAlignment="viewStart"
             android:textColor="@color/gray_blue" />
 
         <TextView
@@ -40,10 +45,11 @@
             android:layout_centerVertical="true"
             android:layout_marginEnd="@dimen/_10sdp"
             android:padding="5dp"
-            android:textSize="@dimen/_12ssp"
             android:text="@string/view_all"
+            android:textAlignment="viewStart"
             android:textAppearance="@style/Base.TextAppearance.AppCompat.Small"
             android:textColor="@color/colorSecondary"
+            android:textSize="@dimen/_12ssp"
             android:textStyle="bold" />
     </RelativeLayout>
 
@@ -52,6 +58,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@+id/titleLyt1"
-        android:layout_margin="5dp"
-        android:background="@drawable/default_bg" />
+        android:layout_marginStart="5dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="5dp"
+        android:layout_marginBottom="5dp"
+        android:background="@color/bg_color" />
 </RelativeLayout>

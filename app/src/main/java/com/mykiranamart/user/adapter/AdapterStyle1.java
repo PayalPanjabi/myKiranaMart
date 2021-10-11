@@ -3,6 +3,7 @@ package com.mykiranamart.user.adapter;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,14 +12,12 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.squareup.picasso.Picasso;
-
-import java.util.ArrayList;
-
 import com.mykiranamart.user.R;
 import com.mykiranamart.user.fragment.ProductDetailFragment;
 import com.mykiranamart.user.helper.ApiConfig;
@@ -26,16 +25,18 @@ import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
 import com.mykiranamart.user.model.Product;
 
+import java.util.ArrayList;
+
 /**
  * Created by shree1 on 3/16/2017.
  */
 
 public class AdapterStyle1 extends RecyclerView.Adapter<AdapterStyle1.VideoHolder> {
 
-    public ArrayList<Product> productList;
-    public Activity activity;
-    public int itemResource;
-    Context context;
+    public final ArrayList<Product> productList;
+    public final Activity activity;
+    public final int itemResource;
+    final Context context;
 
     public AdapterStyle1(Context context, Activity activity, ArrayList<Product> productList, int itemResource) {
         this.context = context;
@@ -47,18 +48,12 @@ public class AdapterStyle1 extends RecyclerView.Adapter<AdapterStyle1.VideoHolde
 
     @Override
     public int getItemCount() {
-        int product;
-        if (productList.size() > 4) {
-            product = 4;
-        } else {
-            product = productList.size();
-        }
-        return product;
+        return Math.min(productList.size(), 4);
     }
 
     @SuppressLint("SetTextI18n")
     @Override
-    public void onBindViewHolder(VideoHolder holder, final int position) {
+    public void onBindViewHolder(@NonNull VideoHolder holder, final int position) {
         final Product product = productList.get(position);
         try {
 
@@ -70,37 +65,47 @@ public class AdapterStyle1 extends RecyclerView.Adapter<AdapterStyle1.VideoHolde
                     .error(R.drawable.placeholder)
                     .into(holder.thumbnail);
 
-            double price;
-            String taxPercentage;
-            taxPercentage = (Double.parseDouble(product.getTax_percentage()) > 0 ? product.getTax_percentage() : "0");
-            if (product.getPriceVariations().get(0).getDiscounted_price().equals("0") || product.getPriceVariations().get(0).getDiscounted_price().equals("")) {
-                price = ((Float.parseFloat(product.getPriceVariations().get(0).getPrice()) + ((Float.parseFloat(product.getPriceVariations().get(0).getPrice()) * Float.parseFloat(taxPercentage)) / 100)));
-            } else {
-                price = ((Float.parseFloat(product.getPriceVariations().get(0).getDiscounted_price()) + ((Float.parseFloat(product.getPriceVariations().get(0).getDiscounted_price()) * Float.parseFloat(taxPercentage)) / 100)));
-            }
 
+            double price, oPrice;
+            String taxPercentage = "0";
+            try {
+                taxPercentage = (Double.parseDouble(product.getTax_percentage()) > 0 ? product.getTax_percentage() : "0");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            if (product.getVariants().get(0).getDiscounted_price().equals("0") || product.getVariants().get(0).getDiscounted_price().equals("")) {
+                holder.tvDPrice.setVisibility(View.GONE);
+                price = ((Float.parseFloat(product.getVariants().get(0).getPrice()) + ((Float.parseFloat(product.getVariants().get(0).getPrice()) * Float.parseFloat(taxPercentage)) / 100)));
+            } else {
+                price = ((Float.parseFloat(product.getVariants().get(0).getDiscounted_price()) + ((Float.parseFloat(product.getVariants().get(0).getDiscounted_price()) * Float.parseFloat(taxPercentage)) / 100)));
+                oPrice = (Float.parseFloat(product.getVariants().get(0).getPrice()) + ((Float.parseFloat(product.getVariants().get(0).getPrice()) * Float.parseFloat(taxPercentage)) / 100));
+
+                holder.tvDPrice.setPaintFlags(holder.tvDPrice.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+                holder.tvDPrice.setText(new Session(activity).getData(Constant.currency) + ApiConfig.StringFormat("" + oPrice));
+
+                holder.tvDPrice.setVisibility(View.VISIBLE);
+            }
             holder.tvPrice.setText(new Session(activity).getData(Constant.currency) + ApiConfig.StringFormat("" + price));
+
             holder.tvTitle.setText(product.getName());
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-        holder.relativeLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        holder.relativeLayout.setOnClickListener(view -> {
 
-                AppCompatActivity activity1 = (AppCompatActivity) context;
-                Fragment fragment = new ProductDetailFragment();
-                Bundle bundle = new Bundle();
-                bundle.putString(Constant.ID, product.getId());
-                bundle.putString(Constant.FROM, "section");
-                bundle.putInt("vpos", 0);
-                fragment.setArguments(bundle);
-                activity1.getSupportFragmentManager().beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
-            }
+            AppCompatActivity activity1 = (AppCompatActivity) context;
+            Fragment fragment = new ProductDetailFragment();
+            Bundle bundle = new Bundle();
+            bundle.putString(Constant.ID, product.getId());
+            bundle.putString(Constant.FROM, "section");
+            bundle.putInt("variantPosition", 0);
+            fragment.setArguments(bundle);
+            activity1.getSupportFragmentManager().beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
         });
     }
 
+    @NonNull
     @Override
     public VideoHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
@@ -118,17 +123,20 @@ public class AdapterStyle1 extends RecyclerView.Adapter<AdapterStyle1.VideoHolde
         return position;
     }
 
-    public class VideoHolder extends RecyclerView.ViewHolder {
+    public static class VideoHolder extends RecyclerView.ViewHolder {
 
-        public ImageView thumbnail;
-        public TextView tvTitle, tvPrice;
-        public RelativeLayout relativeLayout;
+        public final ImageView thumbnail;
+        public final TextView tvTitle;
+        public final TextView tvPrice;
+        public final TextView tvDPrice;
+        public final RelativeLayout relativeLayout;
 
         public VideoHolder(View itemView) {
             super(itemView);
             thumbnail = itemView.findViewById(R.id.thumbnail);
             tvTitle = itemView.findViewById(R.id.tvTitle);
             tvPrice = itemView.findViewById(R.id.tvPrice);
+            tvDPrice = itemView.findViewById(R.id.tvDPrice);
             relativeLayout = itemView.findViewById(R.id.play_layout);
 
         }

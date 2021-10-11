@@ -23,14 +23,16 @@
         card_view:cardPreventCornerOverlap="false">
 
         <ImageView
-            android:id="@+id/imgcategory"
+            android:id="@+id/imgCategory"
             android:layout_width="match_parent"
             android:layout_height="120dp"
-            android:scaleType="fitXY" />
+            android:scaleType="fitXY"
+            android:contentDescription="@string/app_name" />
     </androidx.cardview.widget.CardView>
 
     <TextView
-        android:id="@+id/txttitle"
+                android:textAlignment="center"
+        android:id="@+id/tvTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ellipsize="end"

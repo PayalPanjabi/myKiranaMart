@@ -9,7 +9,7 @@ public class Address implements Serializable {
 
     public Address() {
     }
-    
+
     public String getMinimum_free_delivery_order_amount() {
         return minimum_free_delivery_order_amount;
     }

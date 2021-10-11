@@ -1,8 +1,10 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
@@ -30,15 +32,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.mykiranamart.user.R;
-import com.mykiranamart.user.activity.DrawerActivity;
 import com.mykiranamart.user.adapter.TransactionAdapter;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.model.Transaction;
-
-import static android.content.Context.INPUT_METHOD_SERVICE;
 
 
 public class TransactionFragment extends Fragment {
@@ -87,13 +85,10 @@ public class TransactionFragment extends Fragment {
 
         swipeLayout.setColorSchemeResources(R.color.colorPrimary);
 
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                swipeLayout.setRefreshing(false);
-                offset = 0;
-                getTransactionData();
-            }
+        swipeLayout.setOnRefreshListener(() -> {
+            swipeLayout.setRefreshing(false);
+            offset = 0;
+            getTransactionData();
         });
 
 
@@ -101,6 +96,7 @@ public class TransactionFragment extends Fragment {
     }
 
 
+    @SuppressLint("NotifyDataSetChanged")
     void getTransactionData() {
         recyclerView.setVisibility(View.GONE);
         mShimmerViewContainer.setVisibility(View.VISIBLE);
@@ -116,136 +112,117 @@ public class TransactionFragment extends Fragment {
         params.put(Constant.OFFSET, "" + offset);
         params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
 
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-//                        System.out.println("====transection " + response);
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            total = Integer.parseInt(objectbject.getString(Constant.TOTAL));
-                            session.setData(Constant.TOTAL, String.valueOf(total));
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        total = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
+                        session.setData(Constant.TOTAL, String.valueOf(total));
 
-                            JSONObject object = new JSONObject(response);
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                        JSONObject object = new JSONObject(response);
+                        JSONArray jsonArray = object.getJSONArray(Constant.DATA);
 
-                            Gson g = new Gson();
+                        Gson g = new Gson();
 
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject jsonObject1 = jsonArray.getJSONObject(i);
 
-                                if (jsonObject1 != null) {
-                                    Transaction Transaction = g.fromJson(jsonObject1.toString(), Transaction.class);
-                                    transactions.add(Transaction);
-                                } else {
-                                    break;
-                                }
-
+                            if (jsonObject1 != null) {
+                                Transaction Transaction = g.fromJson(jsonObject1.toString(), Transaction.class);
+                                transactions.add(Transaction);
+                            } else {
+                                break;
                             }
-                            if (offset == 0) {
-                                transactionAdapter = new TransactionAdapter(getContext(), activity, transactions);
-                                transactionAdapter.setHasStableIds(true);
-                                recyclerView.setAdapter(transactionAdapter);
-                                mShimmerViewContainer.stopShimmer();
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                recyclerView.setVisibility(View.VISIBLE);
-                                scrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
-                                    @Override
-                                    public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
 
-                                        // if (diff == 0) {
-                                        if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
-                                            LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                                            if (transactions.size() < total) {
-                                                if (!isLoadMore) {
-                                                    if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == transactions.size() - 1) {
-                                                        //bottom of list!
-                                                        transactions.add(null);
-                                                        transactionAdapter.notifyItemInserted(transactions.size() - 1);
-                                                        new Handler().postDelayed(new Runnable() {
-                                                            @Override
-                                                            public void run() {
-
-                                                                offset += Constant.LOAD_ITEM_LIMIT;
-                                                                Map<String, String> params = new HashMap<>();
-                                                                params.put(Constant.GET_USER_TRANSACTION, Constant.GetVal);
-                                                                params.put(Constant.USER_ID, session.getData(Constant.ID));
-                                                                params.put(Constant.TYPE, Constant.TYPE_TRANSACTION);
-                                                                params.put(Constant.OFFSET, "" + offset);
-                                                                params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
-
-                                                                ApiConfig.RequestToVolley(new VolleyCallback() {
-                                                                    @Override
-                                                                    public void onSuccess(boolean result, String response) {
-
-                                                                        if (result) {
-                                                                            try {
-                                                                                // System.out.println("====product  " + response);
-                                                                                JSONObject objectbject1 = new JSONObject(response);
-                                                                                if (!objectbject1.getBoolean(Constant.ERROR)) {
-
-                                                                                    session.setData(Constant.TOTAL, objectbject1.getString(Constant.TOTAL));
-
-                                                                                    transactions.remove(transactions.size() - 1);
-                                                                                    transactionAdapter.notifyItemRemoved(transactions.size());
-
-                                                                                    JSONObject object = new JSONObject(response);
-                                                                                    JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-
-                                                                                    Gson g = new Gson();
-
-
-                                                                                    for (int i = 0; i < jsonArray.length(); i++) {
-                                                                                        JSONObject jsonObject1 = jsonArray.getJSONObject(i);
-
-                                                                                        if (jsonObject1 != null) {
-                                                                                            Transaction Transaction = g.fromJson(jsonObject1.toString(), Transaction.class);
-                                                                                            transactions.add(Transaction);
-                                                                                        } else {
-                                                                                            break;
-                                                                                        }
-
-                                                                                    }
-                                                                                    transactionAdapter.notifyDataSetChanged();
-                                                                                    transactionAdapter.setLoaded();
-                                                                                    isLoadMore = false;
-                                                                                }
-                                                                            } catch (JSONException e) {
-                                                                                mShimmerViewContainer.stopShimmer();
-                                                                                mShimmerViewContainer.setVisibility(View.GONE);
-                                                                                recyclerView.setVisibility(View.VISIBLE);
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }, activity, Constant.TRANSACTION_URL, params, false);
-
-                                                            }
-                                                        }, 0);
-                                                        isLoadMore = true;
-                                                    }
-
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                        } else {
-                            recyclerView.setVisibility(View.GONE);
-                            tvAlert.setVisibility(View.VISIBLE);
+                        }
+                        if (offset == 0) {
+                            transactionAdapter = new TransactionAdapter(activity, activity, transactions);
+                            recyclerView.setAdapter(transactionAdapter);
                             mShimmerViewContainer.stopShimmer();
                             mShimmerViewContainer.setVisibility(View.GONE);
                             recyclerView.setVisibility(View.VISIBLE);
+                            scrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+
+                                // if (diff == 0) {
+                                if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
+                                    LinearLayoutManager linearLayoutManager1 = (LinearLayoutManager) recyclerView.getLayoutManager();
+                                    if (transactions.size() < total) {
+                                        if (!isLoadMore) {
+                                            if (linearLayoutManager1 != null && linearLayoutManager1.findLastCompletelyVisibleItemPosition() == transactions.size() - 1) {
+                                                //bottom of list!
+                                                transactions.add(null);
+                                                transactionAdapter.notifyItemInserted(transactions.size() - 1);
+                                                offset += Constant.LOAD_ITEM_LIMIT;
+                                                Map<String, String> params1 = new HashMap<>();
+                                                params1.put(Constant.GET_USER_TRANSACTION, Constant.GetVal);
+                                                params1.put(Constant.USER_ID, session.getData(Constant.ID));
+                                                params1.put(Constant.TYPE, Constant.TYPE_TRANSACTION);
+                                                params1.put(Constant.OFFSET, "" + offset);
+                                                params1.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
+
+                                                ApiConfig.RequestToVolley((result1, response1) -> {
+
+                                                    if (result1) {
+                                                        try {
+                                                            JSONObject jsonObject2 = new JSONObject(response1);
+                                                            transactions.remove(transactions.size() - 1);
+                                                            transactionAdapter.notifyItemRemoved(transactions.size());
+                                                            if (!jsonObject2.getBoolean(Constant.ERROR)) {
+
+                                                                session.setData(Constant.TOTAL, jsonObject2.getString(Constant.TOTAL));
+
+
+                                                                JSONObject object1 = new JSONObject(response1);
+                                                                JSONArray jsonArray1 = object1.getJSONArray(Constant.DATA);
+
+                                                                Gson g1 = new Gson();
+
+
+                                                                for (int i = 0; i < jsonArray1.length(); i++) {
+                                                                    JSONObject jsonObject1 = jsonArray1.getJSONObject(i);
+
+                                                                    if (jsonObject1 != null) {
+                                                                        Transaction Transaction = g1.fromJson(jsonObject1.toString(), Transaction.class);
+                                                                        transactions.add(Transaction);
+                                                                    } else {
+                                                                        break;
+                                                                    }
+
+                                                                }
+                                                                transactionAdapter.notifyDataSetChanged();
+                                                                isLoadMore = false;
+                                                            }
+                                                        } catch (JSONException e) {
+                                                            mShimmerViewContainer.stopShimmer();
+                                                            mShimmerViewContainer.setVisibility(View.GONE);
+                                                            recyclerView.setVisibility(View.VISIBLE);
+                                                        }
+                                                    }
+                                                }, activity, Constant.TRANSACTION_URL, params1, false);
+
+                                                isLoadMore = true;
+                                            }
+
+                                        }
+                                    }
+                                }
+                            });
                         }
-                    } catch (JSONException e) {
+                    } else {
+                        recyclerView.setVisibility(View.GONE);
+                        tvAlert.setVisibility(View.VISIBLE);
                         mShimmerViewContainer.stopShimmer();
                         mShimmerViewContainer.setVisibility(View.GONE);
                         recyclerView.setVisibility(View.VISIBLE);
                     }
+                } catch (JSONException e) {
+                    mShimmerViewContainer.stopShimmer();
+                    mShimmerViewContainer.setVisibility(View.GONE);
+                    recyclerView.setVisibility(View.VISIBLE);
                 }
             }
-        }, activity, Constant.TRANSACTION_URL, params, true);
+        }, activity, Constant.TRANSACTION_URL, params, false);
     }
 
     @Override
@@ -253,8 +230,7 @@ public class TransactionFragment extends Fragment {
         super.onResume();
         Constant.TOOLBAR_TITLE = getString(R.string.transaction_history);
         activity.invalidateOptionsMenu();
-        Session.setCount(Constant.UNREAD_TRANSACTION_COUNT, 0, getContext());
-        ApiConfig.updateNavItemCounter(DrawerActivity.navigationView, R.id.menu_transaction_history, Session.getCount(Constant.UNREAD_TRANSACTION_COUNT, getContext()));
+        Session.setCount(Constant.UNREAD_TRANSACTION_COUNT, 0, activity);
         hideKeyboard();
     }
 
@@ -264,12 +240,13 @@ public class TransactionFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.toolbar_cart).setVisible(false);
         menu.findItem(R.id.toolbar_sort).setVisible(false);

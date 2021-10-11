@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.viewpager.widget.PagerAdapter;
@@ -38,8 +39,9 @@ public class SliderAdapter extends PagerAdapter {
         this.from = from;
     }
 
+    @NonNull
     @Override
-    public Object instantiateItem(ViewGroup view, final int position) {
+    public Object instantiateItem(@NonNull ViewGroup view, final int position) {
         View imageLayout = LayoutInflater.from(activity).inflate(layout, view, false);
 
         assert imageLayout != null;
@@ -58,46 +60,43 @@ public class SliderAdapter extends PagerAdapter {
                 .into(imgSlider);
         view.addView(imageLayout, 0);
 
-        lytMain.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (from.equalsIgnoreCase("detail")) {
+        lytMain.setOnClickListener(v -> {
+            if (from.equalsIgnoreCase("detail")) {
 
-                    Fragment fragment = new FullScreenViewFragment();
+                Fragment fragment = new FullScreenViewFragment();
+                Bundle bundle = new Bundle();
+                bundle.putInt("pos", position);
+                fragment.setArguments(bundle);
+
+                MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
+
+            } else {
+
+                if (singleItem.getType().equals("category")) {
+
+                    Fragment fragment = new SubCategoryFragment();
                     Bundle bundle = new Bundle();
-                    bundle.putInt("pos", position);
+                    bundle.putString(Constant.ID, singleItem.getType_id());
+                    bundle.putString(Constant.NAME, singleItem.getName());
+                    bundle.putString(Constant.FROM, "category");
                     fragment.setArguments(bundle);
 
                     MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
 
-                } else {
 
-                    if (singleItem.getType().equals("category")) {
+                } else if (singleItem.getType().equals("product")) {
 
-                        Fragment fragment = new SubCategoryFragment();
-                        Bundle bundle = new Bundle();
-                        bundle.putString(Constant.ID, singleItem.getType_id());
-                        bundle.putString(Constant.NAME, singleItem.getName());
-                        bundle.putString(Constant.FROM, "category");
-                        fragment.setArguments(bundle);
+                    Fragment fragment = new ProductDetailFragment();
+                    Bundle bundle = new Bundle();
+                    bundle.putString(Constant.ID, singleItem.getType_id());
+                    bundle.putString(Constant.FROM, "slider");
+                    bundle.putInt("variantsPosition", 0);
+                    fragment.setArguments(bundle);
 
-                        MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
-
-
-                    } else if (singleItem.getType().equals("product")) {
-
-                        Fragment fragment = new ProductDetailFragment();
-                        Bundle bundle = new Bundle();
-                        bundle.putString(Constant.ID, singleItem.getType_id());
-                        bundle.putString(Constant.FROM, "slider");
-                        bundle.putInt("vpos", 0);
-                        fragment.setArguments(bundle);
-
-                        MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
-
-                    }
+                    MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
 
                 }
+
             }
         });
 
@@ -111,12 +110,12 @@ public class SliderAdapter extends PagerAdapter {
     }
 
     @Override
-    public void destroyItem(ViewGroup container, int position, Object object) {
+    public void destroyItem(ViewGroup container, int position, @NonNull Object object) {
         container.removeView((View) object);
     }
 
     @Override
-    public boolean isViewFromObject(View view, Object object) {
+    public boolean isViewFromObject(View view, @NonNull Object object) {
         return view.equals(object);
     }
 

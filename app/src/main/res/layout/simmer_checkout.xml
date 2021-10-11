@@ -30,7 +30,6 @@
         android:background="@color/background" />
 
     <View
-        android:id="@+id/tv1TaxTitle"
         android:layout_width="@dimen/_120sdp"
         android:layout_height="@dimen/_15sdp"
         android:layout_below="@id/tv1Price"
@@ -38,7 +37,6 @@
         android:background="@color/background" />
 
     <View
-        android:id="@+id/tv1SubTotal"
         android:layout_width="@dimen/_100sdp"
         android:layout_height="@dimen/_15sdp"
         android:layout_below="@id/tv1Price"

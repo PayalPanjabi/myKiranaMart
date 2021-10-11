@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/card_shadow"
@@ -14,9 +15,11 @@
         android:layout_alignParentEnd="true"
         android:layout_margin="@dimen/_3sdp"
         app:cardBackgroundColor="@color/colorPrimary"
-        app:cardCornerRadius="@dimen/dimen_5dp">
+        app:cardCornerRadius="@dimen/dimen_5dp"
+        tools:ignore="RelativeOverlap">
 
         <TextView
+                android:textAlignment="viewStart"
             android:id="@+id/status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -27,7 +30,8 @@
     </androidx.cardview.widget.CardView>
 
     <TextView
-        android:id="@+id/txtorderid"
+                android:textAlignment="viewStart"
+        android:id="@+id/tvOrderID"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="3dp"
@@ -35,15 +39,17 @@
         android:textStyle="bold" />
 
     <TextView
+                android:textAlignment="viewStart"
         android:id="@+id/tvTotalItems"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/txtorderid"
+        android:layout_below="@id/tvOrderID"
         android:layout_marginStart="3dp"
         android:layout_marginTop="@dimen/dimen_5dp"
         android:textColor="@color/gray" />
 
     <TextView
+                android:textAlignment="viewStart"
         android:id="@+id/tvItems"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -62,7 +68,8 @@
         android:background="@color/lightest_gray" />
 
     <TextView
-        android:id="@+id/txtorderdate"
+                android:textAlignment="viewStart"
+        android:id="@+id/tvOrderDate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/view"
@@ -72,17 +79,19 @@
 
 
     <TextView
-        android:id="@+id/txtorderamount"
+                android:textAlignment="viewStart"
+        android:id="@+id/txtOrderAmount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/txtorderdate"
+        android:layout_below="@id/tvOrderDate"
         android:layout_marginStart="3dp"
         android:layout_marginTop="@dimen/dimen_5dp"
         android:textColor="@color/txt_color"
         android:textStyle="bold" />
 
     <TextView
-        android:id="@+id/carddetail"
+                android:textAlignment="center"
+        android:id="@+id/tvCardDetail"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"

@@ -5,7 +5,6 @@
     android:layout_height="@dimen/_24sdp">
 
     <androidx.cardview.widget.CardView
-        android:id="@+id/counterValuePanel"
         android:layout_width="@dimen/_24sdp"
         android:layout_height="@dimen/_24sdp"
         android:elevation="0dp"
@@ -20,7 +19,11 @@
             <ImageView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_margin="@dimen/_3sdp"
+                android:layout_marginStart="@dimen/_3sdp"
+                android:layout_marginTop="@dimen/_3sdp"
+                android:layout_marginEnd="@dimen/_3sdp"
+                android:layout_marginBottom="@dimen/_3sdp"
+                android:contentDescription="@string/app_name"
                 android:src="@drawable/ic_cart" />
 
             <RelativeLayout
@@ -33,18 +36,18 @@
                 <ImageView
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:background="@drawable/ic_circle" />
+                    android:background="@drawable/ic_circle"
+                    android:contentDescription="@string/app_name" />
 
                 <TextView
-                    android:id="@+id/count"
+                    android:id="@+id/tvCounter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerInParent="true"
-                    android:maxEms="2"
-                    android:text="8"
+                    android:maxEms="4"
+                    android:textSize="@dimen/_6sdp"
                     android:textAlignment="center"
                     android:textColor="@color/white"
-                    android:textSize="@dimen/_7ssp"
                     android:textStyle="bold" />
             </RelativeLayout>
         </RelativeLayout>

@@ -1,5 +1,7 @@
 package com.mykiranamart.user.adapter;
 
+import static com.mykiranamart.user.helper.ApiConfig.getMonth;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.view.LayoutInflater;
@@ -18,23 +20,19 @@ import java.util.Calendar;
 import java.util.Date;
 
 import com.mykiranamart.user.R;
-import com.mykiranamart.user.fragment.PaymentFragment;
+import com.mykiranamart.user.activity.PaymentActivity;
 import com.mykiranamart.user.model.Slot;
 
-import static com.mykiranamart.user.helper.ApiConfig.getMonth;
-
 public class SlotAdapter extends RecyclerView.Adapter<SlotAdapter.ViewHolder> {
-    public final ArrayList<Slot> categorylist;
+    public final ArrayList<Slot> slotList;
     final Activity activity;
-    final String deliveryTime;
     int selectedPosition = 0;
     boolean isToday;
 
-    public SlotAdapter(String deliveryTime, Activity activity, ArrayList<Slot> categorylist) {
-        this.deliveryTime = deliveryTime;
+    public SlotAdapter(Activity activity, ArrayList<Slot> slotList) {
         this.activity = activity;
-        this.categorylist = categorylist;
-        PaymentFragment.deliveryTime = "";
+        this.slotList = slotList;
+        PaymentActivity.deliveryTime = "";
     }
 
     @NonNull
@@ -44,10 +42,10 @@ public class SlotAdapter extends RecyclerView.Adapter<SlotAdapter.ViewHolder> {
         return new ViewHolder(view);
     }
 
-    @NonNull
+    @SuppressLint("NotifyDataSetChanged")
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder holder, final int position) {
-        final Slot model = categorylist.get(position);
+        final Slot model = slotList.get(position);
         holder.rdBtn.setText(model.getTitle());
         holder.rdBtn.setTag(position);
         holder.rdBtn.setChecked(position == selectedPosition);
@@ -63,11 +61,11 @@ public class SlotAdapter extends RecyclerView.Adapter<SlotAdapter.ViewHolder> {
             currentTime = sdf.parse(now);
             SlotTime = sdf.parse(model.getLastOrderTime());
         } catch (ParseException e) {
-
+            e.printStackTrace();
         }
 
         Calendar calendar = Calendar.getInstance();
-        isToday = PaymentFragment.deliveryDay.equals(calendar.get(Calendar.DATE) + "-" + getMonth((calendar.get(Calendar.MONTH) + 1)) + "-" + calendar.get(Calendar.YEAR));
+        isToday = PaymentActivity.deliveryDay.equals(calendar.get(Calendar.DATE) + "-" + getMonth(activity,(calendar.get(Calendar.MONTH) + 1)) + "-" + calendar.get(Calendar.YEAR));
 
         assert currentTime != null;
         if (activity != null) {
@@ -91,37 +89,35 @@ public class SlotAdapter extends RecyclerView.Adapter<SlotAdapter.ViewHolder> {
 
         Date finalCurrentTime = currentTime;
         Date finalSlotTime = SlotTime;
-        holder.rdBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (isToday) {
-                    if (finalCurrentTime.compareTo(finalSlotTime) < 0) {
-                        PaymentFragment.deliveryTime = model.getTitle();
-                        selectedPosition = (Integer) v.getTag();
-                        notifyDataSetChanged();
-                    }
-                } else {
-                    PaymentFragment.deliveryTime = model.getTitle();
+        holder.rdBtn.setOnClickListener(v -> {
+            if (isToday) {
+                if (finalCurrentTime.compareTo(finalSlotTime) < 0) {
+                    PaymentActivity.deliveryTime = model.getTitle();
                     selectedPosition = (Integer) v.getTag();
                     notifyDataSetChanged();
                 }
-
+            } else {
+                PaymentActivity.deliveryTime = model.getTitle();
+                selectedPosition = (Integer) v.getTag();
+                notifyDataSetChanged();
             }
+
         });
 
         if (holder.rdBtn.isChecked()) {
+            assert activity != null;
             holder.rdBtn.setButtonDrawable(ContextCompat.getDrawable(activity, R.drawable.ic_radio_button_checked));
             holder.rdBtn.setTextColor(ContextCompat.getColor(activity, R.color.black));
-            PaymentFragment.deliveryTime = model.getTitle();
+            PaymentActivity.deliveryTime = model.getTitle();
         }
     }
 
     @Override
     public int getItemCount() {
-        return categorylist.size();
+        return slotList.size();
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
         final RadioButton rdBtn;
 
         public ViewHolder(View itemView) {

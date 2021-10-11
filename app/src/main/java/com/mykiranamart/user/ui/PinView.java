@@ -48,8 +48,12 @@ import androidx.appcompat.widget.AppCompatEditText;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.view.ViewCompat;
 
+import java.util.Objects;
+
 import com.mykiranamart.user.R;
 import com.mykiranamart.user.helper.DefaultMovementMethod;
+
+
 
 public class PinView extends AppCompatEditText {
 
@@ -192,15 +196,12 @@ public class PinView extends AppCompatEditText {
         mDefaultAddAnimator = ValueAnimator.ofFloat(0.5f, 1f);
         mDefaultAddAnimator.setDuration(150);
         mDefaultAddAnimator.setInterpolator(new DecelerateInterpolator());
-        mDefaultAddAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                float scale = (float) animation.getAnimatedValue();
-                int alpha = (int) (255 * scale);
-                mAnimatorTextPaint.setTextSize(getTextSize() * scale);
-                mAnimatorTextPaint.setAlpha(alpha);
-                postInvalidate();
-            }
+        mDefaultAddAnimator.addUpdateListener(animation -> {
+            float scale = (float) animation.getAnimatedValue();
+            int alpha = (int) (255 * scale);
+            mAnimatorTextPaint.setTextSize(getTextSize() * scale);
+            mAnimatorTextPaint.setAlpha(alpha);
+            postInvalidate();
         });
     }
 
@@ -284,13 +285,13 @@ public class PinView extends AppCompatEditText {
     protected void onSelectionChanged(int selStart, int selEnd) {
         super.onSelectionChanged(selStart, selEnd);
 
-        if (selEnd != getText().length()) {
+        if (selEnd != Objects.requireNonNull(getText()).length()) {
             moveSelectionToEnd();
         }
     }
 
     void moveSelectionToEnd() {
-        setSelection(getText().length());
+        setSelection(Objects.requireNonNull(getText()).length());
     }
 
     @Override
@@ -320,7 +321,7 @@ public class PinView extends AppCompatEditText {
     }
 
     void drawPinView(Canvas canvas) {
-        int highlightIdx = getText().length();
+        int highlightIdx = Objects.requireNonNull(getText()).length();
         for (int i = 0; i < mPinItemCount; i++) {
             boolean highlight = isFocused() && highlightIdx == i;
             mPaint.setColor(highlight ? getLineColorForState(HIGHLIGHT_STATES) : mCurLineColor);
@@ -408,14 +409,14 @@ public class PinView extends AppCompatEditText {
     }
 
     void drawPinBox(Canvas canvas, int i) {
-        if (mHideLineWhenFilled && i < getText().length()) {
+        if (mHideLineWhenFilled && i < Objects.requireNonNull(getText()).length()) {
             return;
         }
         canvas.drawPath(mPath, mPaint);
     }
 
     void drawPinLine(Canvas canvas, int i) {
-        if (mHideLineWhenFilled && i < getText().length()) {
+        if (mHideLineWhenFilled && i < Objects.requireNonNull(getText()).length()) {
             return;
         }
         boolean l, r;
@@ -547,7 +548,7 @@ public class PinView extends AppCompatEditText {
         // =, Rect(4, -26, 26, -10)
         // -, Rect(1, -19, 14, -14)
         // +, Rect(2, -32, 29, -3)
-        drawTextAtBox(canvas, paint, getText(), i);
+        drawTextAtBox(canvas, paint, Objects.requireNonNull(getText()), i);
     }
 
     void drawHint(Canvas canvas, int i) {
@@ -573,7 +574,7 @@ public class PinView extends AppCompatEditText {
     }
 
     Paint getPaintByIndex(int i) {
-        if (isAnimationEnable && i == getText().length() - 1) {
+        if (isAnimationEnable && i == Objects.requireNonNull(getText()).length() - 1) {
             mAnimatorTextPaint.setColor(getPaint().getColor());
             return mAnimatorTextPaint;
         } else {
@@ -607,7 +608,7 @@ public class PinView extends AppCompatEditText {
     }
 
     void updateColors() {
-        boolean inval = false;
+        boolean invalid = false;
 
         int color;
         if (mLineColor != null) {
@@ -618,10 +619,10 @@ public class PinView extends AppCompatEditText {
 
         if (color != mCurLineColor) {
             mCurLineColor = color;
-            inval = true;
+            invalid = true;
         }
 
-        if (inval) {
+        if (invalid) {
             invalidate();
         }
     }
@@ -986,7 +987,7 @@ public class PinView extends AppCompatEditText {
 
     void resumeBlink() {
         if (mBlink != null) {
-            mBlink.uncancel();
+            mBlink.uncanceled();
             makeBlink();
         }
     }
@@ -1032,7 +1033,7 @@ public class PinView extends AppCompatEditText {
             }
         }
 
-        void uncancel() {
+        void uncanceled() {
             mCancelled = false;
         }
     }

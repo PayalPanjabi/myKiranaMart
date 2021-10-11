@@ -8,7 +8,8 @@
     android:background="@color/white"
     android:clickable="true"
     android:focusable="true"
-    android:visibility="visible">
+    android:visibility="visible"
+    shimmer:ignore="Overdraw">
 
     <ScrollView
         android:id="@+id/scrollView"
@@ -23,19 +24,21 @@
             android:layout_margin="5dp">
 
             <LinearLayout
-                android:id="@+id/lytotp"
+                android:id="@+id/lytOTP"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
                 <TextView
+                android:textAlignment="viewStart"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/title_order_otp"
                     android:textColor="@color/colorPrimary" />
 
                 <TextView
-                    android:id="@+id/txtorderotp"
+                android:textAlignment="viewStart"
+                    android:id="@+id/tvOrderOTP"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="5dp"
@@ -45,20 +48,22 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/lytoid"
+                android:id="@+id/lytOrderId"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/lytotp"
+                android:layout_below="@+id/lytOTP"
                 android:orientation="horizontal">
 
                 <TextView
+                android:textAlignment="viewStart"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/ordered_id"
                     android:textColor="@color/dark_gray" />
 
                 <TextView
-                    android:id="@+id/txtorderid"
+                android:textAlignment="viewStart"
+                    android:id="@+id/tvOrderID"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="5dp"
@@ -69,20 +74,22 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/lytodate"
+                android:id="@+id/lytOrderDate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/lytoid"
+                android:layout_below="@+id/lytOrderId"
                 android:orientation="horizontal">
 
                 <TextView
+                android:textAlignment="viewStart"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/order_date"
                     android:textColor="@color/dark_gray" />
 
                 <TextView
-                    android:id="@+id/txtorderdate"
+                android:textAlignment="viewStart"
+                    android:id="@+id/tvOrderDate"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="5dp"
@@ -94,7 +101,7 @@
                 android:id="@+id/line1"
                 android:layout_width="match_parent"
                 android:layout_height="1.5dp"
-                android:layout_below="@+id/lytodate"
+                android:layout_below="@+id/lytOrderDate"
                 android:layout_marginTop="10dp"
                 android:background="@color/bg_color" />
 
@@ -111,10 +118,10 @@
                 android:layout_height="3dp"
                 android:layout_below="@+id/recyclerView"
                 android:layout_marginTop="10dp"
-                android:background="@color/bggray" />
+                android:background="@color/bg_gray" />
 
             <LinearLayout
-                android:id="@+id/lytotherdetail"
+                android:id="@+id/lytOtherDetail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/line2"
@@ -128,6 +135,7 @@
                     android:orientation="vertical">
 
                     <TextView
+                android:textAlignment="viewStart"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="5dp"
@@ -143,6 +151,7 @@
                         android:orientation="horizontal">
 
                         <TextView
+                android:textAlignment="viewStart"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -150,6 +159,7 @@
                             android:textColor="@color/dark_gray" />
 
                         <TextView
+                android:textAlignment="viewEnd"
                             android:id="@+id/tvItemTotal"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -165,6 +175,7 @@
                         android:orientation="horizontal">
 
                         <TextView
+                android:textAlignment="viewStart"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -172,6 +183,7 @@
                             android:textColor="@color/dark_gray" />
 
                         <TextView
+                android:textAlignment="viewEnd"
                             android:id="@+id/tvDeliveryCharge"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -181,12 +193,12 @@
                     </LinearLayout>
 
                     <LinearLayout
-                        android:id="@+id/lytDiscount"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
 
                         <TextView
+                android:textAlignment="viewStart"
                             android:id="@+id/tvDPercent"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -195,6 +207,7 @@
                             android:textColor="@color/dark_gray" />
 
                         <TextView
+                android:textAlignment="viewEnd"
                             android:id="@+id/tvDAmount"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -210,6 +223,7 @@
                         android:orientation="horizontal">
 
                         <TextView
+                android:textAlignment="viewStart"
 
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -218,6 +232,7 @@
                             android:textColor="@color/dark_gray" />
 
                         <TextView
+                android:textAlignment="viewEnd"
                             android:id="@+id/tvTotal"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -233,6 +248,7 @@
                         android:orientation="horizontal">
 
                         <TextView
+                android:textAlignment="viewStart"
                             android:id="@+id/tvPromoCode"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -241,6 +257,7 @@
                             android:textColor="@color/dark_gray" />
 
                         <TextView
+                android:textAlignment="viewEnd"
                             android:id="@+id/tvPCAmount"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -256,6 +273,7 @@
                         android:orientation="horizontal">
 
                         <TextView
+                android:textAlignment="viewStart"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -263,6 +281,7 @@
                             android:textColor="@color/dark_gray" />
 
                         <TextView
+                android:textAlignment="viewEnd"
                             android:id="@+id/tvWallet"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -277,6 +296,7 @@
                         android:orientation="horizontal">
 
                         <TextView
+                android:textAlignment="viewStart"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -286,6 +306,7 @@
                             android:textStyle="bold" />
 
                         <TextView
+                android:textAlignment="viewEnd"
                             android:id="@+id/tvFinalTotal"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -300,10 +321,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="3dp"
                         android:layout_marginTop="10dp"
-                        android:background="@color/bggray" />
+                        android:background="@color/bg_gray" />
                 </LinearLayout>
 
                 <TextView
+                android:textAlignment="viewStart"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
@@ -313,7 +335,8 @@
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/txtotherdetails"
+                android:textAlignment="viewStart"
+                    android:id="@+id/tvOtherDetails"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="@color/dark_gray" />
@@ -323,11 +346,11 @@
                 android:id="@+id/line3"
                 android:layout_width="match_parent"
                 android:layout_height="3dp"
-                android:layout_below="@+id/lytotherdetail"
+                android:layout_below="@+id/lytOtherDetail"
                 android:layout_marginStart="@dimen/_10sdp"
                 android:layout_marginTop="10dp"
                 android:layout_marginEnd="@dimen/_10sdp"
-                android:background="@color/bggray" />
+                android:background="@color/bg_gray" />
 
             <LinearLayout
                 android:id="@+id/lytMainTracker"
@@ -347,14 +370,14 @@
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/txtcanceldetail"
+                    android:id="@+id/tvCancelDetail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textStyle="bold"
                     android:visibility="gone" />
 
                 <LinearLayout
-                    android:id="@+id/lyttracker"
+                    android:id="@+id/lytTracker"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_margin="@dimen/_10sdp"
@@ -376,7 +399,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/order_placed"
                             android:textAlignment="center"
-                            android:textSize="8sp" />
+                            android:textSize="@dimen/_7ssp" />
 
                         <ImageView
                             android:id="@+id/img0"
@@ -390,7 +413,7 @@
                             android:layout_height="wrap_content"
                             android:textAlignment="center"
                             android:textColor="@color/black"
-                            android:textSize="8sp" />
+                            android:textSize="@dimen/_7ssp"/>
                     </LinearLayout>
 
                     <View
@@ -412,9 +435,9 @@
                             android:id="@+id/txt1"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/processed"
+                            android:text="@string/order_processed"
                             android:textAlignment="center"
-                            android:textSize="8sp" />
+                            android:textSize="@dimen/_7ssp"/>
 
                         <ImageView
                             android:id="@+id/img1"
@@ -428,7 +451,7 @@
                             android:layout_height="wrap_content"
                             android:textAlignment="center"
                             android:textColor="@color/black"
-                            android:textSize="8sp" />
+                            android:textSize="@dimen/_7ssp"/>
                     </LinearLayout>
 
                     <View
@@ -452,7 +475,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/shipped"
                             android:textAlignment="center"
-                            android:textSize="8sp" />
+                            android:textSize="@dimen/_7ssp"/>
 
                         <ImageView
                             android:id="@+id/img2"
@@ -466,7 +489,7 @@
                             android:layout_height="wrap_content"
                             android:textAlignment="center"
                             android:textColor="@color/black"
-                            android:textSize="8sp" />
+                            android:textSize="@dimen/_7ssp"/>
                     </LinearLayout>
 
 
@@ -490,7 +513,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/delivered"
                             android:textAlignment="center"
-                            android:textSize="8sp" />
+                            android:textSize="@dimen/_7ssp"/>
 
                         <ImageView
                             android:id="@+id/img3"
@@ -504,7 +527,7 @@
                             android:layout_height="wrap_content"
                             android:textAlignment="center"
                             android:textColor="@color/black"
-                            android:textSize="8sp" />
+                            android:textSize="@dimen/_7ssp"/>
                     </LinearLayout>
 
                     <View
@@ -530,7 +553,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/returned"
                             android:textAlignment="center"
-                            android:textSize="8sp" />
+                            android:textSize="@dimen/_7ssp"/>
 
                         <ImageView
                             android:id="@+id/img4"
@@ -544,7 +567,7 @@
                             android:layout_height="wrap_content"
                             android:textAlignment="center"
                             android:textColor="@color/black"
-                            android:textSize="8sp" />
+                            android:textSize="@dimen/_7ssp"/>
                     </LinearLayout>
 
                 </LinearLayout>
@@ -585,29 +608,29 @@
         android:weightSum="2">
 
         <Button
-            android:id="@+id/btncancel"
+            android:id="@+id/btnCancel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/_3sdp"
             android:layout_weight="1"
             android:background="@drawable/bg_btn"
-            android:onClick="OnBtnClick"
             android:text="@string/cancel_order_detail"
             android:textAllCaps="false"
             android:textColor="@color/white"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            shimmer:ignore="ButtonStyle" />
 
         <Button
-            android:id="@+id/btnreorder"
+            android:id="@+id/btnReorder"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/_3sdp"
             android:layout_weight="1"
             android:background="@drawable/bg_btn"
-            android:onClick="OnBtnClick"
             android:text="@string/reorder"
             android:textAllCaps="false"
             android:textColor="@color/white"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            shimmer:ignore="ButtonStyle" />
     </LinearLayout>
 </RelativeLayout>

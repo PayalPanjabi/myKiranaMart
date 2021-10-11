@@ -1,5 +1,7 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -10,6 +12,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -31,17 +34,14 @@ import com.mykiranamart.user.adapter.CategoryAdapter;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.model.Category;
-
-import static android.content.Context.INPUT_METHOD_SERVICE;
 
 
 public class CategoryFragment extends Fragment {
 
     public static ArrayList<Category> categoryArrayList;
-    TextView txtnodata;
-    RecyclerView categoryrecycleview;
+    TextView tvNoData;
+    RecyclerView categoryRecyclerView;
     SwipeRefreshLayout swipeLayout;
     View root;
     Activity activity;
@@ -58,30 +58,30 @@ public class CategoryFragment extends Fragment {
         setHasOptionsMenu(true);
 
 
-        txtnodata = root.findViewById(R.id.txtnodata);
+        tvNoData = root.findViewById(R.id.tvNoData);
         swipeLayout = root.findViewById(R.id.swipeLayout);
-        categoryrecycleview = root.findViewById(R.id.categoryrecycleview);
+        categoryRecyclerView = root.findViewById(R.id.categoryRecyclerView);
 
-        categoryrecycleview.setLayoutManager(new GridLayoutManager(getContext(), Constant.GRIDCOLUMN));
-        swipeLayout.setColorSchemeColors(getResources().getColor(R.color.colorPrimary));
+        categoryRecyclerView.setLayoutManager(new GridLayoutManager(activity, Constant.GRID_COLUMN));
+        swipeLayout.setColorSchemeColors(ContextCompat.getColor(activity,R.color.colorPrimary));
 
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                if (ApiConfig.isConnected(activity)) {
-                    if (new Session(activity).getBoolean(Constant.IS_USER_LOGIN)) {
-                        ApiConfig.getWalletBalance(activity, new Session(activity));
-                    }
-                    GetCategory();
-                }
-                swipeLayout.setRefreshing(false);
+
+        swipeLayout.setOnRefreshListener(() -> {
+            swipeLayout.setRefreshing(false);
+            if (ApiConfig.isConnected(activity)) {
+                categoryRecyclerView.setVisibility(View.GONE);
+                mShimmerViewContainer.setVisibility(View.VISIBLE);
+                mShimmerViewContainer.startShimmer();
+                ApiConfig.getWalletBalance(activity, new Session(activity));
+                GetCategory();
             }
         });
 
         if (ApiConfig.isConnected(activity)) {
-            if (new Session(activity).getBoolean(Constant.IS_USER_LOGIN)) {
-                ApiConfig.getWalletBalance(activity, new Session(activity));
-            }
+            categoryRecyclerView.setVisibility(View.GONE);
+            mShimmerViewContainer.setVisibility(View.VISIBLE);
+            mShimmerViewContainer.startShimmer();
+            ApiConfig.getWalletBalance(activity, new Session(activity));
             GetCategory();
         }
 
@@ -89,43 +89,34 @@ public class CategoryFragment extends Fragment {
     }
 
     void GetCategory() {
-        categoryrecycleview.setVisibility(View.GONE);
-        mShimmerViewContainer.setVisibility(View.VISIBLE);
-        mShimmerViewContainer.startShimmer();
         Map<String, String> params = new HashMap<>();
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                //System.out.println("======cate " + response);
-                if (result) {
-                    try {
-                        JSONObject object = new JSONObject(response);
-                        categoryArrayList = new ArrayList<>();
-                        categoryArrayList.clear();
-                        if (!object.getBoolean(Constant.ERROR)) {
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-                            Gson gson = new Gson();
-
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                                Category category = gson.fromJson(jsonObject.toString(), Category.class);
-                                categoryArrayList.add(category);
-                            }
-                            categoryrecycleview.setAdapter(new CategoryAdapter(getContext(), activity, categoryArrayList, R.layout.lyt_subcategory, "category", 0));
-                            mShimmerViewContainer.stopShimmer();
-                            mShimmerViewContainer.setVisibility(View.GONE);
-                            categoryrecycleview.setVisibility(View.VISIBLE);
-                        } else {
-                            txtnodata.setVisibility(View.VISIBLE);
-                            mShimmerViewContainer.stopShimmer();
-                            mShimmerViewContainer.setVisibility(View.GONE);
-                            categoryrecycleview.setVisibility(View.GONE);
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject object = new JSONObject(response);
+                    categoryArrayList = new ArrayList<>();
+                    if (!object.getBoolean(Constant.ERROR)) {
+                        JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                        Gson gson = new Gson();
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject jsonObject = jsonArray.getJSONObject(i);
+                            Category category = gson.fromJson(jsonObject.toString(), Category.class);
+                            categoryArrayList.add(category);
                         }
-                    } catch (JSONException e) {
+                        categoryRecyclerView.setAdapter(new CategoryAdapter(activity, categoryArrayList, R.layout.lyt_subcategory, "category", 0));
                         mShimmerViewContainer.stopShimmer();
                         mShimmerViewContainer.setVisibility(View.GONE);
-                        categoryrecycleview.setVisibility(View.GONE);
+                        categoryRecyclerView.setVisibility(View.VISIBLE);
+                    } else {
+                        tvNoData.setVisibility(View.VISIBLE);
+                        mShimmerViewContainer.stopShimmer();
+                        mShimmerViewContainer.setVisibility(View.GONE);
+                        categoryRecyclerView.setVisibility(View.GONE);
                     }
+                } catch (JSONException e) {
+                    mShimmerViewContainer.stopShimmer();
+                    mShimmerViewContainer.setVisibility(View.GONE);
+                    categoryRecyclerView.setVisibility(View.GONE);
                 }
             }
         }, activity, Constant.CategoryUrl, params, false);
@@ -135,7 +126,7 @@ public class CategoryFragment extends Fragment {
     public void onResume() {
         super.onResume();
         Constant.TOOLBAR_TITLE = getString(R.string.title_category);
-        getActivity().invalidateOptionsMenu();
+        requireActivity().invalidateOptionsMenu();
         hideKeyboard();
     }
 
@@ -145,13 +136,14 @@ public class CategoryFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
         super.onPrepareOptionsMenu(menu);
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         menu.findItem(R.id.toolbar_cart).setVisible(true);
         menu.findItem(R.id.toolbar_sort).setVisible(false);
         menu.findItem(R.id.toolbar_search).setVisible(true);

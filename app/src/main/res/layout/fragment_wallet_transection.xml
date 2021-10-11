@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:shimmer="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_color"
     android:clickable="true"
     android:focusable="true"
-    android:theme="@style/AppTheme">
+    android:theme="@style/AppTheme"
+    tools:ignore="Overdraw">
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeLayout"
@@ -32,21 +34,23 @@
 
                     <TextView
                         android:id="@+id/tvTitleBalance"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_alignParentStart="true"
                         android:layout_alignParentTop="true"
                         android:layout_marginStart="@dimen/dimen_5dp"
                         android:text="@string/your_balance"
-                        android:textColor="@color/light_blue"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/colorPrimaryLight"
                         android:textSize="@dimen/_20ssp" />
 
                     <TextView
                         android:id="@+id/tvBalance"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_below="@+id/tvTitleBalance"
                         android:layout_marginStart="@dimen/dimen_5dp"
+                        android:textAlignment="viewStart"
                         android:textColor="@color/white"
                         android:textSize="@dimen/_25ssp"
                         android:textStyle="bold" />
@@ -71,8 +75,7 @@
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/recyclerView"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:visibility="gone" />
+                    android:layout_height="match_parent" />
 
                 <com.facebook.shimmer.ShimmerFrameLayout
                     android:id="@+id/mShimmerViewContainer"
@@ -113,7 +116,7 @@
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <RelativeLayout
-        android:id="@+id/tvAlert"
+        android:id="@+id/lytAlert"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
@@ -126,6 +129,7 @@
             android:layout_centerHorizontal="true"
             android:layout_marginTop="@dimen/dimen_15dp"
             android:text="@string/no_transaction_history_found"
+            android:textAlignment="viewStart"
             android:textColor="@color/gray"
             android:textSize="@dimen/dimen_20dp"
             android:textStyle="bold" />
@@ -138,6 +142,7 @@
             android:layout_centerHorizontal="true"
             android:layout_marginTop="@dimen/dimen_15dp"
             android:text="@string/you_have_not_any_transactional_history_yet"
+            android:textAlignment="viewStart"
             android:textColor="@color/gray"
             android:textSize="@dimen/dimen_15dp"
             android:textStyle="bold" />

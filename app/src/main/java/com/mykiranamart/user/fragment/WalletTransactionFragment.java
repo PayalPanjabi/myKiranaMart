@@ -1,12 +1,13 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -21,7 +22,6 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -40,6 +40,14 @@ import com.paytm.pgsdk.PaytmOrder;
 import com.paytm.pgsdk.PaytmPGService;
 import com.paytm.pgsdk.PaytmPaymentTransactionCallback;
 import com.razorpay.Checkout;
+import com.sslcommerz.library.payment.model.datafield.MandatoryFieldModel;
+import com.sslcommerz.library.payment.model.dataset.TransactionInfo;
+import com.sslcommerz.library.payment.model.util.CurrencyType;
+import com.sslcommerz.library.payment.model.util.ErrorKeys;
+import com.sslcommerz.library.payment.model.util.SdkCategory;
+import com.sslcommerz.library.payment.model.util.SdkType;
+import com.sslcommerz.library.payment.viewmodel.listener.OnPaymentResultListener;
+import com.sslcommerz.library.payment.viewmodel.management.PayUsingSSLCommerz;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -52,7 +60,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import com.mykiranamart.user.R;
-import com.mykiranamart.user.activity.DrawerActivity;
 import com.mykiranamart.user.activity.MidtransActivity;
 import com.mykiranamart.user.activity.PayPalWebActivity;
 import com.mykiranamart.user.activity.PayStackActivity;
@@ -62,24 +69,22 @@ import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.PaymentModelClass;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.model.Address;
 import com.mykiranamart.user.model.WalletTransaction;
 
-import static android.content.Context.INPUT_METHOD_SERVICE;
-
-
+@SuppressLint({"NotifyDataSetChanged", "SetTextI18n"})
 public class WalletTransactionFragment extends Fragment implements PaytmPaymentTransactionCallback {
     public static String amount, msg;
     public static boolean payFromWallet = false;
+    @SuppressLint("StaticFieldLeak")
     public static TextView tvBalance;
     View root;
-    RecyclerView recyclerView;
-    ArrayList<WalletTransaction> walletTransactions;
+    public static RecyclerView recyclerView;
+    public static ArrayList<WalletTransaction> walletTransactions;
     SwipeRefreshLayout swipeLayout;
     NestedScrollView scrollView;
-    RelativeLayout tvAlert;
-    WalletTransactionAdapter walletTransactionAdapter;
+    public static RelativeLayout lytAlert;
+    public static WalletTransactionAdapter walletTransactionAdapter;
     int total = 0;
     Activity activity;
     int offset = 0;
@@ -105,7 +110,7 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
         final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(activity);
         recyclerView.setLayoutManager(linearLayoutManager);
         swipeLayout = root.findViewById(R.id.swipeLayout);
-        tvAlert = root.findViewById(R.id.tvAlert);
+        lytAlert = root.findViewById(R.id.lytAlert);
         tvAlertTitle = root.findViewById(R.id.tvAlertTitle);
         tvAlertSubTitle = root.findViewById(R.id.tvAlertSubTitle);
         tvBalance = root.findViewById(R.id.tvBalance);
@@ -121,190 +126,176 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
 
         swipeLayout.setColorSchemeResources(R.color.colorPrimary);
 
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                swipeLayout.setRefreshing(false);
-                offset = 0;
-                getTransactionData(activity, session);
-            }
+        swipeLayout.setOnRefreshListener(() -> {
+            swipeLayout.setRefreshing(false);
+            offset = 0;
+            getTransactionData(activity, session);
         });
 
         ApiConfig.getWalletBalance(activity, session);
 
         tvBalance.setText(session.getData(Constant.currency) + Constant.WALLET_BALANCE);
 
-        btnRechargeWallet.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        btnRechargeWallet.setOnClickListener(v -> {
 
-                final AlertDialog.Builder alertDialog = new AlertDialog.Builder(getContext());
-                LayoutInflater inflater = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            final AlertDialog.Builder alertDialog = new AlertDialog.Builder(activity);
+            LayoutInflater inflater1 = (LayoutInflater) requireActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
-                final View dialogView = inflater.inflate(R.layout.dialog_wallet_recharge, null);
-                alertDialog.setView(dialogView);
-                alertDialog.setCancelable(true);
-                final AlertDialog dialog = alertDialog.create();
-                Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+            final View dialogView = inflater1.inflate(R.layout.dialog_wallet_recharge, null);
+            alertDialog.setView(dialogView);
+            alertDialog.setCancelable(true);
+            final AlertDialog dialog = alertDialog.create();
+            Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
 
-                TextView tvDialogSend, tvDialogCancel, edtAmount, edtMsg;
-                LinearLayout lytPayOption;
-                RadioGroup lytPayment;
-                RadioButton rbPayU, rbPayPal, rbRazorPay, rbPayStack, rbFlutterWave, rbMidTrans, rbStripe, rbPayTm;
+            TextView tvDialogSend, tvDialogCancel, edtAmount, edtMsg;
+            LinearLayout lytPayOption;
+            RadioGroup lytPayment;
+            RadioButton rbPayU, rbPayPal, rbRazorPay, rbPayStack, rbFlutterWave, rbMidTrans, rbStripe, rbPayTm;
 
-                edtAmount = dialogView.findViewById(R.id.edtAmount);
-                edtMsg = dialogView.findViewById(R.id.edtMsg);
-                tvDialogCancel = dialogView.findViewById(R.id.tvDialogCancel);
-                tvDialogSend = dialogView.findViewById(R.id.tvDialogRecharge);
-                lytPayOption = dialogView.findViewById(R.id.lytPayOption);
+            edtAmount = dialogView.findViewById(R.id.edtAmount);
+            edtMsg = dialogView.findViewById(R.id.edtMsg);
+            tvDialogCancel = dialogView.findViewById(R.id.tvDialogCancel);
+            tvDialogSend = dialogView.findViewById(R.id.tvDialogRecharge);
+            lytPayOption = dialogView.findViewById(R.id.lytPayOption);
 
-                rbPayStack = dialogView.findViewById(R.id.rbPayStack);
-                rbFlutterWave = dialogView.findViewById(R.id.rbFlutterWave);
-                rbPayPal = dialogView.findViewById(R.id.rbPayPal);
-                rbRazorPay = dialogView.findViewById(R.id.rbRazorPay);
-                rbMidTrans = dialogView.findViewById(R.id.rbMidTrans);
-                rbStripe = dialogView.findViewById(R.id.rbStripe);
-                rbPayTm = dialogView.findViewById(R.id.rbPayTm);
-                rbPayU = dialogView.findViewById(R.id.rbPayU);
-                lytPayment = dialogView.findViewById(R.id.lytPayment);
+            rbPayStack = dialogView.findViewById(R.id.rbPayStack);
+            rbFlutterWave = dialogView.findViewById(R.id.rbFlutterWave);
+            rbPayPal = dialogView.findViewById(R.id.rbPayPal);
+            rbRazorPay = dialogView.findViewById(R.id.rbRazorPay);
+            rbMidTrans = dialogView.findViewById(R.id.rbMidTrans);
+            rbStripe = dialogView.findViewById(R.id.rbStripe);
+            rbPayTm = dialogView.findViewById(R.id.rbPayTm);
+            rbPayU = dialogView.findViewById(R.id.rbPayU);
+            lytPayment = dialogView.findViewById(R.id.lytPayment);
 
-                lytPayment.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-                    @Override
-                    public void onCheckedChanged(RadioGroup group, @IdRes int checkedId) {
-                        RadioButton rb = (RadioButton) dialogView.findViewById(checkedId);
-                        paymentMethod = rb.getTag().toString();
-                    }
-                });
+            lytPayment.setOnCheckedChangeListener((group, checkedId) -> {
+                RadioButton rb = dialogView.findViewById(checkedId);
+                paymentMethod = rb.getTag().toString();
+            });
 
-                Map<String, String> params = new HashMap<>();
-                params.put(Constant.SETTINGS, Constant.GetVal);
-                params.put(Constant.GET_PAYMENT_METHOD, Constant.GetVal);
-                //  System.out.println("=====params " + params.toString());
-                ApiConfig.RequestToVolley(new VolleyCallback() {
-                    @Override
-                    public void onSuccess(boolean result, String response) {
+            Map<String, String> params = new HashMap<>();
+            params.put(Constant.SETTINGS, Constant.GetVal);
+            params.put(Constant.GET_PAYMENT_METHOD, Constant.GetVal);
+            //  System.out.println("=====params " + params.toString());
+            ApiConfig.RequestToVolley((result, response) -> {
 
-                        if (result) {
-                            try {
-                                JSONObject objectbject = new JSONObject(response);
-                                if (!objectbject.getBoolean(Constant.ERROR)) {
-                                    if (objectbject.has("payment_methods")) {
-                                        JSONObject object = objectbject.getJSONObject(Constant.PAYMENT_METHODS);
-                                        if (object.has(Constant.payu_method)) {
-                                            Constant.PAYUMONEY = object.getString(Constant.payu_method);
-                                            Constant.MERCHANT_KEY = object.getString(Constant.PAY_M_KEY);
-                                            Constant.MERCHANT_ID = object.getString(Constant.PAYU_M_ID);
-                                            Constant.MERCHANT_SALT = object.getString(Constant.PAYU_SALT);
-                                            ApiConfig.SetAppEnvironment(activity);
-                                        }
-                                        if (object.has(Constant.razor_pay_method)) {
-                                            Constant.RAZORPAY = object.getString(Constant.razor_pay_method);
-                                            Constant.RAZOR_PAY_KEY_VALUE = object.getString(Constant.RAZOR_PAY_KEY);
-                                        }
-                                        if (object.has(Constant.paypal_method)) {
-                                            Constant.PAYPAL = object.getString(Constant.paypal_method);
-                                        }
-                                        if (object.has(Constant.paystack_method)) {
-                                            Constant.PAYSTACK = object.getString(Constant.paystack_method);
-                                            Constant.PAYSTACK_KEY = object.getString(Constant.paystack_public_key);
-                                        }
-                                        if (object.has(Constant.flutterwave_payment_method)) {
-                                            Constant.FLUTTERWAVE = object.getString(Constant.flutterwave_payment_method);
-                                            Constant.FLUTTERWAVE_ENCRYPTION_KEY_VAL = object.getString(Constant.flutterwave_encryption_key);
-                                            Constant.FLUTTERWAVE_PUBLIC_KEY_VAL = object.getString(Constant.flutterwave_public_key);
-                                            Constant.FLUTTERWAVE_SECRET_KEY_VAL = object.getString(Constant.flutterwave_secret_key);
-                                            Constant.FLUTTERWAVE_SECRET_KEY_VAL = object.getString(Constant.flutterwave_secret_key);
-                                            Constant.FLUTTERWAVE_CURRENCY_CODE_VAL = object.getString(Constant.flutterwave_currency_code);
-                                        }
-                                        if (object.has(Constant.midtrans_payment_method)) {
-                                            Constant.MIDTRANS = object.getString(Constant.midtrans_payment_method);
-                                        }
-                                        if (object.has(Constant.stripe_payment_method)) {
-                                            Constant.STRIPE = object.getString(Constant.stripe_payment_method);
-                                            isAddressAvailable();
-                                        }
-                                        if (object.has(Constant.paytm_payment_method)) {
-                                            Constant.PAYTM = object.getString(Constant.paytm_payment_method);
-                                            Constant.PAYTM_MERCHANT_ID = object.getString(Constant.paytm_merchant_id);
-                                            Constant.PAYTM_MERCHANT_KEY = object.getString(Constant.paytm_merchant_key);
-                                            Constant.PAYTM_MODE = object.getString(Constant.paytm_mode);
-                                        }
-
-                                        if (Constant.FLUTTERWAVE.equals("0") && Constant.PAYPAL.equals("0") && Constant.PAYUMONEY.equals("0") && Constant.COD.equals("0") && Constant.RAZORPAY.equals("0") && Constant.PAYSTACK.equals("0") && Constant.MIDTRANS.equals("0") && Constant.STRIPE.equals("0")) {
-                                            lytPayOption.setVisibility(View.GONE);
-                                        } else {
-                                            lytPayOption.setVisibility(View.VISIBLE);
-
-                                            if (Constant.PAYUMONEY.equals("1")) {
-                                                rbPayU.setVisibility(View.VISIBLE);
-                                            }
-                                            if (Constant.RAZORPAY.equals("1")) {
-                                                rbRazorPay.setVisibility(View.VISIBLE);
-                                            }
-                                            if (Constant.PAYSTACK.equals("1")) {
-                                                rbPayStack.setVisibility(View.VISIBLE);
-                                            }
-                                            if (Constant.FLUTTERWAVE.equals("1")) {
-                                                rbFlutterWave.setVisibility(View.VISIBLE);
-                                            }
-                                            if (Constant.PAYPAL.equals("1")) {
-                                                rbPayPal.setVisibility(View.VISIBLE);
-                                            }
-                                            if (Constant.MIDTRANS.equals("1")) {
-                                                rbMidTrans.setVisibility(View.VISIBLE);
-                                            }
-                                            if (Constant.STRIPE.equals("1")) {
-                                                rbStripe.setVisibility(View.VISIBLE);
-                                            }
-                                            if (Constant.PAYTM.equals("1")) {
-                                                rbPayTm.setVisibility(View.VISIBLE);
-                                            }
-                                        }
-                                    } else {
-                                        Toast.makeText(activity, getString(R.string.alert_payment_methods_blank), Toast.LENGTH_SHORT).show();
-                                    }
+                if (result) {
+                    try {
+                        JSONObject jsonObject = new JSONObject(response);
+                        if (!jsonObject.getBoolean(Constant.ERROR)) {
+                            if (jsonObject.has("payment_methods")) {
+                                JSONObject object = jsonObject.getJSONObject(Constant.PAYMENT_METHODS);
+                                if (object.has(Constant.payu_method)) {
+                                    Constant.PAYUMONEY = object.getString(Constant.payu_method);
+                                    Constant.MERCHANT_KEY = object.getString(Constant.PAY_M_KEY);
+                                    Constant.MERCHANT_ID = object.getString(Constant.PAYU_M_ID);
+                                    Constant.MERCHANT_SALT = object.getString(Constant.PAYU_SALT);
+                                    ApiConfig.SetAppEnvironment(activity);
+                                }
+                                if (object.has(Constant.razor_pay_method)) {
+                                    Constant.RAZORPAY = object.getString(Constant.razor_pay_method);
+                                    Constant.RAZOR_PAY_KEY_VALUE = object.getString(Constant.RAZOR_PAY_KEY);
+                                }
+                                if (object.has(Constant.paypal_method)) {
+                                    Constant.PAYPAL = object.getString(Constant.paypal_method);
+                                }
+                                if (object.has(Constant.paystack_method)) {
+                                    Constant.PAY_STACK = object.getString(Constant.paystack_method);
+                                    Constant.PAY_STACK_KEY = object.getString(Constant.pay_stack_public_key);
+                                }
+                                if (object.has(Constant.flutter_wave_payment_method)) {
+                                    Constant.FLUTTER_WAVE = object.getString(Constant.flutter_wave_payment_method);
+                                    Constant.FLUTTER_WAVE_ENCRYPTION_KEY_VAL = object.getString(Constant.flutter_wave_encryption_key);
+                                    Constant.FLUTTER_WAVE_PUBLIC_KEY_VAL = object.getString(Constant.flutter_wave_public_key);
+                                    Constant.FLUTTER_WAVE_SECRET_KEY_VAL = object.getString(Constant.flutter_wave_secret_key);
+                                    Constant.FLUTTER_WAVE_SECRET_KEY_VAL = object.getString(Constant.flutter_wave_secret_key);
+                                    Constant.FLUTTER_WAVE_CURRENCY_CODE_VAL = object.getString(Constant.flutter_wave_currency_code);
+                                }
+                                if (object.has(Constant.midtrans_payment_method)) {
+                                    Constant.MIDTRANS = object.getString(Constant.midtrans_payment_method);
+                                }
+                                if (object.has(Constant.stripe_payment_method)) {
+                                    Constant.STRIPE = object.getString(Constant.stripe_payment_method);
+                                    isAddressAvailable();
+                                }
+                                if (object.has(Constant.paytm_payment_method)) {
+                                    Constant.PAYTM = object.getString(Constant.paytm_payment_method);
+                                    Constant.PAYTM_MERCHANT_ID = object.getString(Constant.paytm_merchant_id);
+                                    Constant.PAYTM_MERCHANT_KEY = object.getString(Constant.paytm_merchant_key);
+                                    Constant.PAYTM_MODE = object.getString(Constant.paytm_mode);
+                                }
+                                if (object.has(Constant.ssl_method)) {
+                                    Constant.SSLECOMMERZ = object.getString(Constant.ssl_method);
+                                    Constant.SSLECOMMERZ_MODE = object.getString(Constant.ssl_mode);
+                                    Constant.SSLECOMMERZ_STORE_ID = object.getString(Constant.ssl_store_id);
+                                    Constant.SSLECOMMERZ_SECRET_KEY = object.getString(Constant.ssl_store_password);
                                 }
 
-                            } catch (JSONException e) {
+                                if (Constant.FLUTTER_WAVE.equals("0") && Constant.PAYPAL.equals("0") && Constant.PAYUMONEY.equals("0") && Constant.COD.equals("0") && Constant.RAZORPAY.equals("0") && Constant.PAY_STACK.equals("0") && Constant.MIDTRANS.equals("0") && Constant.STRIPE.equals("0") && Constant.PAYTM.equals("0") && Constant.SSLECOMMERZ.equals("0")) {
+                                    lytPayOption.setVisibility(View.GONE);
+                                } else {
+                                    lytPayOption.setVisibility(View.VISIBLE);
 
-                            }
-                        }
-                    }
-                }, activity, Constant.SETTING_URL, params, false);
-
-                tvDialogSend.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if (edtAmount.getText().toString().equals("")) {
-                            edtAmount.requestFocus();
-                            edtAmount.setError(getString(R.string.alert_enter_amount));
-                        } else if (Double.parseDouble(edtAmount.getText().toString()) > Double.parseDouble(session.getData(Constant.user_wallet_refill_limit))) {
-                            Toast.makeText(activity, getString(R.string.max_wallet_amt_error), Toast.LENGTH_SHORT).show();
-                        } else if (Double.parseDouble(edtAmount.getText().toString().trim()) <= 0) {
-                            edtAmount.requestFocus();
-                            edtAmount.setError(getString(R.string.alert_recharge));
-                        } else {
-                            if (paymentMethod != null) {
-                                amount = edtAmount.getText().toString().trim();
-                                msg = edtMsg.getText().toString().trim();
-                                RechargeWallet();
-                                dialog.dismiss();
+                                    if (Constant.PAYUMONEY.equals("1")) {
+                                        rbPayU.setVisibility(View.VISIBLE);
+                                    }
+                                    if (Constant.RAZORPAY.equals("1")) {
+                                        rbRazorPay.setVisibility(View.VISIBLE);
+                                    }
+                                    if (Constant.PAY_STACK.equals("1")) {
+                                        rbPayStack.setVisibility(View.VISIBLE);
+                                    }
+                                    if (Constant.FLUTTER_WAVE.equals("1")) {
+                                        rbFlutterWave.setVisibility(View.VISIBLE);
+                                    }
+                                    if (Constant.PAYPAL.equals("1")) {
+                                        rbPayPal.setVisibility(View.VISIBLE);
+                                    }
+                                    if (Constant.MIDTRANS.equals("1")) {
+                                        rbMidTrans.setVisibility(View.VISIBLE);
+                                    }
+                                    if (Constant.STRIPE.equals("1")) {
+                                        rbStripe.setVisibility(View.VISIBLE);
+                                    }
+                                    if (Constant.PAYTM.equals("1")) {
+                                        rbPayTm.setVisibility(View.VISIBLE);
+                                    }
+                                }
                             } else {
-                                Toast.makeText(activity, getString(R.string.select_payment_method), Toast.LENGTH_SHORT).show();
+                                Toast.makeText(activity, getString(R.string.alert_payment_methods_blank), Toast.LENGTH_SHORT).show();
                             }
                         }
-                    }
-                });
 
-                tvDialogCancel.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }, activity, Constant.SETTING_URL, params, false);
+
+            tvDialogSend.setOnClickListener(v1 -> {
+                if (edtAmount.getText().toString().equals("")) {
+                    edtAmount.requestFocus();
+                    edtAmount.setError(getString(R.string.alert_enter_amount));
+                } else if (Double.parseDouble(edtAmount.getText().toString()) > Double.parseDouble(session.getData(Constant.user_wallet_refill_limit))) {
+                    Toast.makeText(activity, getString(R.string.max_wallet_amt_error), Toast.LENGTH_SHORT).show();
+                } else if (Double.parseDouble(edtAmount.getText().toString().trim()) <= 0) {
+                    edtAmount.requestFocus();
+                    edtAmount.setError(getString(R.string.alert_recharge));
+                } else {
+                    if (paymentMethod != null) {
+                        amount = edtAmount.getText().toString().trim();
+                        msg = edtMsg.getText().toString().trim();
+                        RechargeWallet();
                         dialog.dismiss();
+                    } else {
+                        Toast.makeText(activity, getString(R.string.select_payment_method), Toast.LENGTH_SHORT).show();
                     }
-                });
+                }
+            });
 
-                dialog.show();
-            }
+            tvDialogCancel.setOnClickListener(v12 -> dialog.dismiss());
+
+            dialog.show();
         });
 
         return root;
@@ -315,40 +306,38 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
         Map<String, String> params = new HashMap<>();
         params.put(Constant.GET_ADDRESSES, Constant.GetVal);
         params.put(Constant.USER_ID, session.getData(Constant.ID));
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject jsonObject = new JSONObject(response);
-                        if (!jsonObject.getBoolean(Constant.ERROR)) {
-                            total = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
-                            session.setData(Constant.TOTAL, String.valueOf(total));
-                            JSONObject object = new JSONObject(response);
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-                            Gson g = new Gson();
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        total = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
+                        session.setData(Constant.TOTAL, String.valueOf(total));
+                        JSONObject object = new JSONObject(response);
+                        JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                        Gson g = new Gson();
 
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
-                                if (jsonObject1 != null) {
-                                    Address address = g.fromJson(jsonObject1.toString(), Address.class);
-                                    if (address.getIs_default().equals("1")) {
-                                        Constant.DefaultAddress = address.getAddress() + ", " + address.getLandmark() + ", " + address.getCity_name() + ", " + address.getArea_name() + ", " + address.getState() + ", " + address.getCountry() + ", " + activity.getString(R.string.pincode_) + address.getPincode();
-                                        Constant.DefaultCity = address.getCity_name();
-                                        Constant.DefaultPinCode = address.getPincode();
-                                    }
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                            if (jsonObject1 != null) {
+                                Address address = g.fromJson(jsonObject1.toString(), Address.class);
+                                if (address.getIs_default().equals("1")) {
+                                    Constant.DefaultAddress = address.getAddress() + ", " + address.getLandmark() + ", " + address.getCity_name() + ", " + address.getArea_name() + ", " + address.getState() + ", " + address.getCountry() + ", " + activity.getString(R.string.pincode_) + address.getPincode();
+                                    Constant.DefaultCity = address.getCity_name();
+                                    Constant.DefaultPinCode = address.getPincode();
                                 }
                             }
                         }
-                    } catch (JSONException e) {
-
                     }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         }, activity, Constant.GET_ADDRESS_URL, params, false);
     }
 
-    public void AddWalletBalance(Activity activity, Session session, String amount, String msg, String txID) {
+    @SuppressLint("SetTextI18n")
+    public void AddWalletBalance(Activity activity, Session session, String amount, String msg) {
         Map<String, String> params = new HashMap<>();
         params.put(Constant.ADD_WALLET_BALANCE, Constant.GetVal);
         params.put(Constant.USER_ID, session.getData(Constant.ID));
@@ -356,23 +345,31 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
         params.put(Constant.TYPE, Constant.CREDIT);
         params.put(Constant.MESSAGE, msg);
 
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject object = new JSONObject(response);
-                        if (!object.getBoolean(Constant.ERROR)) {
-                            DrawerActivity.tvWallet.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + Double.parseDouble(object.getString(Constant.NEW_BALANCE))));
-                            tvBalance.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + Double.parseDouble(object.getString(Constant.NEW_BALANCE))));
-                        }
-                    } catch (JSONException e) {
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject object = new JSONObject(response);
+                    if (!object.getBoolean(Constant.ERROR)) {
+                        WalletTransaction walletTransaction = new Gson().fromJson(object.getJSONObject(Constant.DATA).toString(), WalletTransaction.class);
 
+                        if (walletTransactions == null)
+                            walletTransactions = new ArrayList<>();
+                        if (walletTransactions.size() == 0) {
+                            lytAlert.setVisibility(View.GONE);
+                        }
+                        walletTransactions.add(walletTransaction);
+                        if (walletTransactionAdapter == null) {
+                            walletTransactionAdapter = new WalletTransactionAdapter(activity, walletTransactions);
+                            recyclerView.setAdapter(walletTransactionAdapter);
+                        }
+                        walletTransactionAdapter.notifyDataSetChanged();
+                        tvBalance.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + Double.parseDouble(object.getString(Constant.NEW_BALANCE))));
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
-        }, activity, Constant.TRANSACTION_URL, params, true);
+        }, activity, Constant.TRANSACTION_URL, params, false);
     }
 
 
@@ -384,16 +381,13 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
         params.put(Constant.ITEM_NAME, getString(R.string.wallet_recharge));
         params.put(Constant.ITEM_NUMBER, "wallet-refill-user-" + new Session(activity).getData(Constant.ID) + "-" + System.currentTimeMillis());
         params.put(Constant.AMOUNT, sendParams.get(Constant.FINAL_TOTAL));
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                Intent intent = new Intent(getContext(), PayPalWebActivity.class);
-                intent.putExtra(Constant.URL, response);
-                intent.putExtra(Constant.ORDER_ID, "wallet-refill-user-" + new Session(activity).getData(Constant.ID) + "-" + System.currentTimeMillis());
-                intent.putExtra(Constant.FROM, Constant.WALLET);
-                intent.putExtra(Constant.PARAMS, (Serializable) sendParams);
-                startActivity(intent);
-            }
+        ApiConfig.RequestToVolley((result, response) -> {
+            Intent intent = new Intent(activity, PayPalWebActivity.class);
+            intent.putExtra(Constant.URL, response);
+            intent.putExtra(Constant.ORDER_ID, "wallet-refill-user-" + new Session(activity).getData(Constant.ID) + "-" + System.currentTimeMillis());
+            intent.putExtra(Constant.FROM, Constant.WALLET);
+            intent.putExtra(Constant.PARAMS, (Serializable) sendParams);
+            startActivity(intent);
         }, getActivity(), Constant.PAPAL_URL, params, true);
     }
 
@@ -408,12 +402,12 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
         new RavePayManager(this)
                 .setAmount(Double.parseDouble(amount))
                 .setEmail(session.getData(Constant.EMAIL))
-                .setCurrency(Constant.FLUTTERWAVE_CURRENCY_CODE_VAL)
+                .setCurrency(Constant.FLUTTER_WAVE_CURRENCY_CODE_VAL)
                 .setfName(session.getData(Constant.FIRST_NAME))
                 .setlName(session.getData(Constant.LAST_NAME))
                 .setNarration(getString(R.string.app_name) + getString(R.string.shopping))
-                .setPublicKey(Constant.FLUTTERWAVE_PUBLIC_KEY_VAL)
-                .setEncryptionKey(Constant.FLUTTERWAVE_ENCRYPTION_KEY_VAL)
+                .setPublicKey(Constant.FLUTTER_WAVE_PUBLIC_KEY_VAL)
+                .setEncryptionKey(Constant.FLUTTER_WAVE_ENCRYPTION_KEY_VAL)
                 .setTxRef(System.currentTimeMillis() + "Ref")
                 .acceptAccountPayments(true)
                 .acceptCardPayments(true)
@@ -435,67 +429,61 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
                 .initialize();
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != RaveConstants.RAVE_REQUEST_CODE && data != null) {
-            new PaymentModelClass(getActivity()).TrasactionMethod(data, getActivity(), Constant.WALLET);
+            new PaymentModelClass(getActivity()).TransactionMethod(data, getActivity(), Constant.WALLET);
         } else if (requestCode == RaveConstants.RAVE_REQUEST_CODE && data != null) {
-            try {
-                JSONObject details = new JSONObject(data.getStringExtra("response"));
-                JSONObject jsonObject = details.getJSONObject(Constant.DATA);
+            if (resultCode == RavePayActivity.RESULT_SUCCESS) {
+                AddWalletBalance(activity, new Session(activity), amount, msg);
+                Toast.makeText(activity, getString(R.string.wallet_recharged), Toast.LENGTH_LONG).show();
 
-                if (resultCode == RavePayActivity.RESULT_SUCCESS) {
-                    AddWalletBalance(activity, new Session(activity), amount, msg, jsonObject.getString("txRef"));
-                    Toast.makeText(getContext(), getString(R.string.wallet_recharged), Toast.LENGTH_LONG).show();
-
-                } else if (resultCode == RavePayActivity.RESULT_ERROR) {
-                    Toast.makeText(getContext(), getString(R.string.order_error), Toast.LENGTH_LONG).show();
-                } else if (resultCode == RavePayActivity.RESULT_CANCELLED) {
-                    Toast.makeText(getContext(), getString(R.string.order_cancel), Toast.LENGTH_LONG).show();
-                }
-            } catch (JSONException e) {
-
+            } else if (resultCode == RavePayActivity.RESULT_ERROR) {
+                Toast.makeText(activity, getString(R.string.order_error), Toast.LENGTH_LONG).show();
+            } else if (resultCode == RavePayActivity.RESULT_CANCELLED) {
+                Toast.makeText(activity, getString(R.string.order_cancel), Toast.LENGTH_LONG).show();
             }
         }
     }
 
     public void RechargeWallet() {
-        HashMap<String, String> sendparams = new HashMap<>();
+        HashMap<String, String> sendParams = new HashMap<>();
         if (paymentMethod.equals(getString(R.string.pay_u))) {
-            sendparams.put(Constant.MOBILE, session.getData(Constant.MOBILE));
-            sendparams.put(Constant.USER_NAME, session.getData(Constant.NAME));
-            sendparams.put(Constant.EMAIL, session.getData(Constant.EMAIL));
-            new PaymentModelClass(getActivity()).OnPayClick(getActivity(), sendparams, Constant.WALLET, amount);
+            sendParams.put(Constant.MOBILE, session.getData(Constant.MOBILE));
+            sendParams.put(Constant.USER_NAME, session.getData(Constant.NAME));
+            sendParams.put(Constant.EMAIL, session.getData(Constant.EMAIL));
+            new PaymentModelClass(getActivity()).OnPayClick(getActivity(), sendParams, Constant.WALLET, amount);
         } else if (paymentMethod.equals(getString(R.string.paypal))) {
-            sendparams.put(Constant.FINAL_TOTAL, amount);
-            sendparams.put(Constant.FIRST_NAME, session.getData(Constant.NAME));
-            sendparams.put(Constant.LAST_NAME, session.getData(Constant.NAME));
-            sendparams.put(Constant.PAYER_EMAIL, session.getData(Constant.EMAIL));
-            sendparams.put(Constant.ITEM_NAME, getString(R.string.wallet_recharge_));
-            sendparams.put(Constant.ITEM_NUMBER, System.currentTimeMillis() + Constant.randomNumeric(3));
-            StartPayPalPayment(sendparams);
+            sendParams.put(Constant.FINAL_TOTAL, amount);
+            sendParams.put(Constant.FIRST_NAME, session.getData(Constant.NAME));
+            sendParams.put(Constant.LAST_NAME, session.getData(Constant.NAME));
+            sendParams.put(Constant.PAYER_EMAIL, session.getData(Constant.EMAIL));
+            sendParams.put(Constant.ITEM_NAME, getString(R.string.wallet_recharge_));
+            sendParams.put(Constant.ITEM_NUMBER, System.currentTimeMillis() + Constant.randomNumeric(3));
+            StartPayPalPayment(sendParams);
         } else if (paymentMethod.equals(getString(R.string.razor_pay))) {
             payFromWallet = true;
             CreateOrderId(Double.parseDouble(amount));
         } else if (paymentMethod.equals(getString(R.string.paystack))) {
-            sendparams.put(Constant.FINAL_TOTAL, amount);
-            sendparams.put(Constant.FROM, Constant.WALLET);
-            callPayStack(sendparams);
+            sendParams.put(Constant.FINAL_TOTAL, amount);
+            sendParams.put(Constant.FROM, Constant.WALLET);
+            callPayStack(sendParams);
         } else if (paymentMethod.equals(getString(R.string.flutterwave))) {
             StartFlutterWavePayment();
         } else if (paymentMethod.equals(getString(R.string.midtrans))) {
-            sendparams.put(Constant.FINAL_TOTAL, amount);
-            sendparams.put(Constant.USER_ID, session.getData(Constant.ID));
-            CreateMidtransPayment(System.currentTimeMillis() + Constant.randomNumeric(3), amount, sendparams);
+            sendParams.put(Constant.FINAL_TOTAL, amount);
+            sendParams.put(Constant.USER_ID, session.getData(Constant.ID));
+            CreateMidtransPayment(amount, sendParams);
         } else if (paymentMethod.equals(getString(R.string.stripe))) {
             if (!Constant.DefaultAddress.equals("")) {
-                sendparams.put(Constant.FINAL_TOTAL, amount);
-                sendparams.put(Constant.USER_ID, session.getData(Constant.ID));
+                sendParams.put(Constant.FINAL_TOTAL, amount);
+                sendParams.put(Constant.USER_ID, session.getData(Constant.ID));
                 Intent intent = new Intent(activity, StripeActivity.class);
                 intent.putExtra(Constant.ORDER_ID, "wallet-refill-user-" + new Session(activity).getData(Constant.ID) + "-" + System.currentTimeMillis());
                 intent.putExtra(Constant.FROM, Constant.WALLET);
-                intent.putExtra(Constant.PARAMS, (Serializable) sendparams);
+                intent.putExtra(Constant.PARAMS, sendParams);
                 startActivity(intent);
             } else {
                 Toast.makeText(activity, getString(R.string.address_msg), Toast.LENGTH_SHORT).show();
@@ -503,7 +491,60 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
 
         } else if (paymentMethod.equals(getString(R.string.paytm))) {
             startPayTmPayment();
+        } else if (paymentMethod.equals(getString(R.string.sslecommerz))) {
+            startSslCommerzPayment(amount, msg, System.currentTimeMillis() + Constant.randomNumeric(3));
         }
+    }
+
+
+    public void startSslCommerzPayment(String amount, String msg, String txnId) {
+        String mode;
+        if (Constant.SSLECOMMERZ_MODE.equals("sandbox")) {
+            mode = SdkType.TESTBOX;
+        } else {
+            mode = SdkType.LIVE;
+        }
+
+        MandatoryFieldModel mandatoryFieldModel = new MandatoryFieldModel(Constant.SSLECOMMERZ_STORE_ID, Constant.SSLECOMMERZ_SECRET_KEY, amount, txnId, CurrencyType.BDT, mode, SdkCategory.BANK_LIST);
+
+        /* Call for the payment */
+        PayUsingSSLCommerz.getInstance().setData(activity, mandatoryFieldModel, new OnPaymentResultListener() {
+            @Override
+            public void transactionSuccess(TransactionInfo transactionInfo) {
+                // If payment is success and risk label is 0.
+                AddWalletBalance(activity, new Session(activity), amount, msg);
+            }
+
+            @Override
+            public void transactionFail(String sessionKey) {
+                Toast.makeText(activity, "transactionFail -> Session : " + sessionKey, Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void error(int errorCode) {
+                switch (errorCode) {
+                    case ErrorKeys.USER_INPUT_ERROR:
+                        Toast.makeText(activity, "User Input Error", Toast.LENGTH_LONG).show();
+                        break;
+                    case ErrorKeys.INTERNET_CONNECTION_ERROR:
+                        Toast.makeText(activity, "Internet Connection Error", Toast.LENGTH_LONG).show();
+                        break;
+                    case ErrorKeys.DATA_PARSING_ERROR:
+                        Toast.makeText(activity, "Data Parsing Error", Toast.LENGTH_LONG).show();
+                        break;
+                    case ErrorKeys.CANCEL_TRANSACTION_ERROR:
+                        Toast.makeText(activity, "User Cancel The Transaction", Toast.LENGTH_LONG).show();
+                        break;
+                    case ErrorKeys.SERVER_ERROR:
+                        Toast.makeText(activity, "Server Error", Toast.LENGTH_LONG).show();
+                        break;
+                    case ErrorKeys.NETWORK_ERROR:
+                        Toast.makeText(activity, "Network Error", Toast.LENGTH_LONG).show();
+                        break;
+                }
+            }
+        });
+
     }
 
     public void startPayTmPayment() {
@@ -557,22 +598,23 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
                     }
 
                     paramMap.put(Constant.CALLBACK_URL, object.getString(Constant.CALLBACK_URL));
-                    paramMap.put(Constant.CHECKSUMHASH, jsonObject.getString("signature"));
+                    paramMap.put(Constant.CHECK_SUM_HASH, jsonObject.getString("signature"));
 
                     //creating a paytm order object using the hashmap
                     PaytmOrder order = new PaytmOrder(paramMap);
 
-                    //intializing the paytm service
+                    //initializing the paytm service
+                    assert Service != null;
                     Service.initialize(order, null);
 
                     //finally starting the payment transaction
                     Service.startPaymentTransaction(getActivity(), true, true, this);
 
                 } catch (JSONException e) {
-
+                    e.printStackTrace();
                 }
             }
-        }, Constant.GENERATE_PAYTM_CHECKSUM, params);
+        }, activity, Constant.GENERATE_PAYTM_CHECKSUM, params, false);
 
 
     }
@@ -601,15 +643,14 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
                     JSONObject jsonObject = new JSONObject(response);
                     String status = jsonObject.getJSONObject("body").getJSONObject("resultInfo").getString("resultStatus");
                     if (status.equalsIgnoreCase("TXN_SUCCESS")) {
-                        String txnId = jsonObject.getJSONObject("body").getString("txnId");
-                        AddWalletBalance(activity, new Session(activity), amount, msg, txnId);
-                        Toast.makeText(getContext(), getString(R.string.wallet_recharged), Toast.LENGTH_LONG).show();
+                        AddWalletBalance(activity, new Session(activity), amount, msg);
+                        Toast.makeText(activity, getString(R.string.wallet_recharged), Toast.LENGTH_LONG).show();
                     }
                 } catch (JSONException e) {
-
+                    e.printStackTrace();
                 }
             }
-        }, Constant.VALID_TRANSACTION, params);
+        }, activity, Constant.VALID_TRANSACTION, params, false);
     }
 
     @Override
@@ -649,18 +690,15 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
 
         Map<String, String> params = new HashMap<>();
         params.put("amount", amount[0]);
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject object = new JSONObject(response);
-                        if (!object.getBoolean(Constant.ERROR)) {
-                            startPayment(object.getString("id"), object.getString("amount"));
-                        }
-                    } catch (JSONException e) {
-
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject object = new JSONObject(response);
+                    if (!object.getBoolean(Constant.ERROR)) {
+                        startPayment(object.getString("id"), object.getString("amount"));
                     }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         }, getActivity(), Constant.Get_RazorPay_OrderId, params, true);
@@ -684,17 +722,21 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
             preFill.put(Constant.CONTACT, session.getData(Constant.MOBILE));
             options.put("prefill", preFill);
 
-            checkout.open(getActivity(), options);
+            checkout.open(activity, options);
         } catch (Exception e) {
             Log.d("Payment : ", "Error in starting Razorpay Checkout", e);
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void getTransactionData(Activity activity, Session session) {
-        recyclerView.setVisibility(View.GONE);
+        walletTransactions = new ArrayList<>();
+        if(walletTransactionAdapter!=null) {
+            recyclerView.setAdapter(new WalletTransactionAdapter(activity, walletTransactions));
+            walletTransactionAdapter.notifyDataSetChanged();
+        }
         mShimmerViewContainer.setVisibility(View.VISIBLE);
         mShimmerViewContainer.startShimmer();
-        walletTransactions = new ArrayList<>();
         Map<String, String> params = new HashMap<>();
         params.put(Constant.GET_USER_TRANSACTION, Constant.GetVal);
         params.put(Constant.USER_ID, session.getData(Constant.ID));
@@ -702,160 +744,134 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
         params.put(Constant.OFFSET, "" + offset);
         params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
 
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            total = Integer.parseInt(objectbject.getString(Constant.TOTAL));
-                            session.setData(Constant.TOTAL, String.valueOf(total));
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        lytAlert.setVisibility(View.GONE);
+                        total = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
+                        session.setData(Constant.TOTAL, String.valueOf(total));
 
-                            JSONObject object = new JSONObject(response);
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                        JSONObject object = new JSONObject(response);
+                        JSONArray jsonArray = object.getJSONArray(Constant.DATA);
 
-                            Gson g = new Gson();
+                        Gson g = new Gson();
 
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
-                                if (jsonObject1 != null) {
-                                    WalletTransaction transaction = g.fromJson(jsonObject1.toString(), WalletTransaction.class);
-                                    walletTransactions.add(transaction);
-                                } else {
-                                    break;
-                                }
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                            if (jsonObject1 != null) {
+                                WalletTransaction transaction = g.fromJson(jsonObject1.toString(), WalletTransaction.class);
+                                walletTransactions.add(transaction);
+                            } else {
+                                break;
                             }
-                            if (offset == 0) {
-                                walletTransactionAdapter = new WalletTransactionAdapter(getContext(), activity, walletTransactions);
-                                walletTransactionAdapter.setHasStableIds(true);
-                                recyclerView.setAdapter(walletTransactionAdapter);
-                                mShimmerViewContainer.stopShimmer();
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                recyclerView.setVisibility(View.VISIBLE);
-                                scrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
-                                    @Override
-                                    public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-
-                                        // if (diff == 0) {
-                                        if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
-                                            LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                                            if (walletTransactions.size() < total) {
-                                                if (!isLoadMore) {
-                                                    if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == walletTransactions.size() - 1) {
-                                                        //bottom of list!
-                                                        walletTransactions.add(null);
-                                                        walletTransactionAdapter.notifyItemInserted(walletTransactions.size() - 1);
-                                                        new Handler().postDelayed(new Runnable() {
-                                                            @Override
-                                                            public void run() {
-
-                                                                offset += Constant.LOAD_ITEM_LIMIT;
-                                                                Map<String, String> params = new HashMap<>();
-                                                                params.put(Constant.GET_USER_TRANSACTION, Constant.GetVal);
-                                                                params.put(Constant.USER_ID, session.getData(Constant.ID));
-                                                                params.put(Constant.TYPE, Constant.TYPE_WALLET_TRANSACTION);
-                                                                params.put(Constant.OFFSET, "" + offset);
-                                                                params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
-
-                                                                ApiConfig.RequestToVolley(new VolleyCallback() {
-                                                                    @Override
-                                                                    public void onSuccess(boolean result, String response) {
-
-                                                                        if (result) {
-                                                                            try {
-                                                                                // System.out.println("====product  " + response);
-                                                                                JSONObject objectbject1 = new JSONObject(response);
-                                                                                if (!objectbject1.getBoolean(Constant.ERROR)) {
-
-                                                                                    session.setData(Constant.TOTAL, objectbject1.getString(Constant.TOTAL));
-
-                                                                                    walletTransactions.remove(walletTransactions.size() - 1);
-                                                                                    walletTransactionAdapter.notifyItemRemoved(walletTransactions.size());
-
-                                                                                    JSONObject object = new JSONObject(response);
-                                                                                    JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-
-                                                                                    Gson g = new Gson();
-
-
-                                                                                    for (int i = 0; i < jsonArray.length(); i++) {
-                                                                                        JSONObject jsonObject1 = jsonArray.getJSONObject(i);
-
-                                                                                        if (jsonObject1 != null) {
-                                                                                            WalletTransaction walletTransaction = g.fromJson(jsonObject1.toString(), WalletTransaction.class);
-                                                                                            walletTransactions.add(walletTransaction);
-                                                                                        } else {
-                                                                                            break;
-                                                                                        }
-                                                                                    }
-                                                                                    walletTransactionAdapter.notifyDataSetChanged();
-                                                                                    walletTransactionAdapter.setLoaded();
-                                                                                    isLoadMore = false;
-                                                                                }
-                                                                            } catch (JSONException e) {
-                                                                                mShimmerViewContainer.stopShimmer();
-                                                                                mShimmerViewContainer.setVisibility(View.GONE);
-                                                                                recyclerView.setVisibility(View.GONE);
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }, activity, Constant.TRANSACTION_URL, params, false);
-
-                                                            }
-                                                        }, 0);
-                                                        isLoadMore = true;
-                                                    }
-
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                        } else {
-                            recyclerView.setVisibility(View.GONE);
-                            tvAlert.setVisibility(View.VISIBLE);
+                        }
+                        if (offset == 0) {
+                            walletTransactionAdapter = new WalletTransactionAdapter(activity, walletTransactions);
+                            recyclerView.setAdapter(walletTransactionAdapter);
                             mShimmerViewContainer.stopShimmer();
                             mShimmerViewContainer.setVisibility(View.GONE);
-                            recyclerView.setVisibility(View.GONE);
+                            scrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
 
+                                // if (diff == 0) {
+                                if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
+                                    LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+                                    if (walletTransactions.size() < total) {
+                                        if (!isLoadMore) {
+                                            if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == walletTransactions.size() - 1) {
+                                                //bottom of list!
+                                                walletTransactions.add(null);
+                                                walletTransactionAdapter.notifyItemInserted(walletTransactions.size() - 1);
+                                                offset += Constant.LOAD_ITEM_LIMIT;
+                                                Map<String, String> params1 = new HashMap<>();
+                                                params1.put(Constant.GET_USER_TRANSACTION, Constant.GetVal);
+                                                params1.put(Constant.USER_ID, session.getData(Constant.ID));
+                                                params1.put(Constant.TYPE, Constant.TYPE_WALLET_TRANSACTION);
+                                                params1.put(Constant.OFFSET, "" + offset);
+                                                params1.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
+
+                                                ApiConfig.RequestToVolley((result1, response1) -> {
+
+                                                    if (result1) {
+                                                        try {
+                                                            // System.out.println("====product  " + response);
+                                                            JSONObject jsonObject12 = new JSONObject(response1);
+                                                            if (!jsonObject12.getBoolean(Constant.ERROR)) {
+
+                                                                session.setData(Constant.TOTAL, jsonObject12.getString(Constant.TOTAL));
+
+                                                                walletTransactions.remove(walletTransactions.size() - 1);
+                                                                walletTransactionAdapter.notifyItemRemoved(walletTransactions.size());
+
+                                                                JSONObject object1 = new JSONObject(response1);
+                                                                JSONArray jsonArray1 = object1.getJSONArray(Constant.DATA);
+
+                                                                Gson g1 = new Gson();
+
+
+                                                                for (int i = 0; i < jsonArray1.length(); i++) {
+                                                                    JSONObject jsonObject1 = jsonArray1.getJSONObject(i);
+
+                                                                    if (jsonObject1 != null) {
+                                                                        WalletTransaction walletTransaction = g1.fromJson(jsonObject1.toString(), WalletTransaction.class);
+                                                                        walletTransactions.add(walletTransaction);
+                                                                    } else {
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                walletTransactionAdapter.notifyDataSetChanged();
+                                                                isLoadMore = false;
+                                                            }
+                                                        } catch (JSONException e) {
+                                                            mShimmerViewContainer.stopShimmer();
+                                                            mShimmerViewContainer.setVisibility(View.GONE);
+                                                        }
+                                                    }
+                                                }, activity, Constant.TRANSACTION_URL, params1, false);
+                                                isLoadMore = true;
+                                            }
+
+                                        }
+                                    }
+                                }
+                            });
                         }
-                    } catch (JSONException e) {
+                    } else {
+                        lytAlert.setVisibility(View.VISIBLE);
                         mShimmerViewContainer.stopShimmer();
                         mShimmerViewContainer.setVisibility(View.GONE);
-                        recyclerView.setVisibility(View.GONE);
-                    }
 
+                    }
+                } catch (JSONException e) {
+                    mShimmerViewContainer.stopShimmer();
+                    mShimmerViewContainer.setVisibility(View.GONE);
                 }
+
             }
         }, activity, Constant.TRANSACTION_URL, params, false);
 
     }
 
 
-    public void CreateMidtransPayment(String orderId, String
-            grossAmount, Map<String, String> sendparams) {
+    public void CreateMidtransPayment(String grossAmount, Map<String, String> sendParams) {
         Map<String, String> params = new HashMap<>();
         params.put(Constant.ORDER_ID, "wallet-refill-user-" + new Session(activity).getData(Constant.ID) + "-" + System.currentTimeMillis());
         params.put(Constant.GROSS_AMOUNT, "" + (int) Math.round(Double.parseDouble(grossAmount)));
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject jsonObject = new JSONObject(response);
-                        if (!jsonObject.getBoolean(Constant.ERROR)) {
-                            Intent intent = new Intent(activity, MidtransActivity.class);
-                            intent.putExtra(Constant.URL, jsonObject.getJSONObject(Constant.DATA).getString(Constant.REDIRECT_URL));
-                            intent.putExtra(Constant.ORDER_ID, "wallet-refill-user-" + new Session(activity).getData(Constant.ID) + "-" + System.currentTimeMillis());
-                            intent.putExtra(Constant.FROM, Constant.WALLET);
-                            intent.putExtra(Constant.PARAMS, (Serializable) sendparams);
-                            startActivity(intent);
-                        }
-                    } catch (JSONException e) {
-
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        Intent intent = new Intent(activity, MidtransActivity.class);
+                        intent.putExtra(Constant.URL, jsonObject.getJSONObject(Constant.DATA).getString(Constant.REDIRECT_URL));
+                        intent.putExtra(Constant.ORDER_ID, "wallet-refill-user-" + new Session(activity).getData(Constant.ID) + "-" + System.currentTimeMillis());
+                        intent.putExtra(Constant.FROM, Constant.WALLET);
+                        intent.putExtra(Constant.PARAMS, (Serializable) sendParams);
+                        startActivity(intent);
                     }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         }, activity, Constant.MIDTRANS_PAYMENT_URL, params, true);
@@ -865,8 +881,7 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
     public void onResume() {
         super.onResume();
         Constant.TOOLBAR_TITLE = getString(R.string.wallet_history);
-        Session.setCount(Constant.UNREAD_WALLET_COUNT, 0, getContext());
-        ApiConfig.updateNavItemCounter(DrawerActivity.navigationView, R.id.menu_wallet_history, Session.getCount(Constant.UNREAD_WALLET_COUNT, getContext()));
+        Session.setCount(Constant.UNREAD_WALLET_COUNT, 0, activity);
         activity.invalidateOptionsMenu();
         hideKeyboard();
     }
@@ -877,12 +892,13 @@ public class WalletTransactionFragment extends Fragment implements PaytmPaymentT
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.toolbar_cart).setVisible(false);
         menu.findItem(R.id.toolbar_sort).setVisible(false);

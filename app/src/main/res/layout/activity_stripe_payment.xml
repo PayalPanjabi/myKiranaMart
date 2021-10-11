@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:background="@color/bg_color"
+    android:orientation="vertical"
+    tools:ignore="Overdraw">
 
     <include
         android:id="@+id/toolbar"
@@ -22,7 +25,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="@dimen/dimen_10dp"
-                android:background="@drawable/default_bg"
+                android:background="@drawable/bg_btn"
                 android:padding="@dimen/dimen_20dp">
 
                 <ImageView
@@ -31,9 +34,11 @@
                     android:layout_height="@dimen/dimen_60dp"
                     android:layout_alignParentStart="true"
                     android:layout_centerVertical="true"
-                    android:src="@drawable/logo_login" />
+                    android:src="@drawable/logo_login"
+                    android:contentDescription="@string/app_name" />
 
                 <TextView
+                android:textAlignment="viewStart"
                     android:id="@+id/tvTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -46,6 +51,7 @@
                     android:textStyle="bold" />
 
                 <TextView
+                android:textAlignment="viewStart"
                     android:id="@+id/tvPayableAmount"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

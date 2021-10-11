@@ -6,7 +6,8 @@
     android:layout_height="match_parent"
     android:background="@color/bg_color"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    shimmer:ignore="Overdraw">
 
     <LinearLayout
         android:id="@+id/processLyt"
@@ -14,41 +15,43 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:background="@color/white"
-        android:gravity="center_horizontal"
         android:orientation="horizontal"
-        android:paddingTop="15dp"
-        android:paddingBottom="15dp">
+        android:padding="15dp"
+        android:weightSum="3">
 
         <TextView
             android:id="@+id/tvAddress"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginEnd="@dimen/_10sdp"
+            android:layout_weight="1"
             android:drawablePadding="@dimen/_10sdp"
             android:text="@string/address"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textAlignment="viewStart"
             android:textColor="@color/txt_color"
             app:drawableStartCompat="@drawable/ic_next_process" />
 
         <TextView
             android:id="@+id/tvSummary"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginEnd="@dimen/_10sdp"
+            android:layout_weight="1"
             android:drawablePadding="@dimen/_10sdp"
             android:text="@string/checkout"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textAlignment="viewStart"
             android:textColor="@color/gray"
             app:drawableStartCompat="@drawable/ic_next_process_gray" />
 
 
         <TextView
             android:id="@+id/tvPayment"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:drawablePadding="@dimen/_10sdp"
             android:text="@string/payment"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textAlignment="viewStart"
             android:textColor="@color/gray"
             app:drawableStartCompat="@drawable/ic_next_process_gray" />
     </LinearLayout>
@@ -84,19 +87,21 @@
         android:layout_alignParentEnd="true"
         android:layout_margin="@dimen/_15sdp"
         android:clickable="true"
+        android:contentDescription="@string/app_name"
         android:focusable="true"
         app:fabSize="mini"
         app:srcCompat="@drawable/ic_add_address" />
 
 
     <com.facebook.shimmer.ShimmerFrameLayout
-        android:layout_below="@id/processLyt"
         android:id="@+id/mShimmerViewContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_below="@id/processLyt"
         android:layout_gravity="center"
         android:orientation="vertical"
-        shimmer:shimmer_duration="1200">
+        shimmer:shimmer_duration="1200"
+        android:visibility="gone">
 
         <!-- Adding rows of placeholders -->
         <LinearLayout
@@ -136,15 +141,17 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_toStartOf="@id/tvConfirmOrder"
+            android:textAlignment="viewStart"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             android:textColor="@color/txt_color" />
 
         <TextView
-            android:id="@+id/txttotalitems"
+            android:id="@+id/tvTotalItems"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@id/tvSubTotal"
             android:layout_toStartOf="@id/tvConfirmOrder"
+            android:textAlignment="viewStart"
             android:textAppearance="@style/TextAppearance.AppCompat.Small"
             android:textColor="@color/gray" />
 
@@ -159,6 +166,7 @@
             android:gravity="center"
             android:padding="@dimen/dimen_12dp"
             android:text="@string/btn_continue"
+            android:textAlignment="center"
             android:textAllCaps="true"
             android:textColor="@color/white"
             android:textStyle="bold" />
@@ -172,6 +180,7 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="@dimen/dimen_15dp"
         android:text="@string/no_address_found"
+        android:textAlignment="viewStart"
         android:textColor="@color/gray"
         android:textSize="@dimen/dimen_20dp"
         android:textStyle="bold"

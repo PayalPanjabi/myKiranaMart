@@ -1,5 +1,8 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -32,10 +35,7 @@ import com.mykiranamart.user.adapter.FaqAdapter;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.model.Faq;
-
-import static android.content.Context.INPUT_METHOD_SERVICE;
 
 
 public class FaqFragment extends Fragment {
@@ -74,13 +74,10 @@ public class FaqFragment extends Fragment {
 
         swipeLayout.setColorSchemeResources(R.color.colorPrimary);
 
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                swipeLayout.setRefreshing(false);
-                offset = 0;
-                getFaqData();
-            }
+        swipeLayout.setOnRefreshListener(() -> {
+            swipeLayout.setRefreshing(false);
+            offset = 0;
+            getFaqData();
         });
 
 
@@ -88,6 +85,7 @@ public class FaqFragment extends Fragment {
     }
 
 
+    @SuppressLint("NotifyDataSetChanged")
     void getFaqData() {
         recyclerView.setVisibility(View.GONE);
         mShimmerViewContainer.setVisibility(View.VISIBLE);
@@ -101,129 +99,122 @@ public class FaqFragment extends Fragment {
         params.put(Constant.OFFSET, "" + offset);
         params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT + 10);
 
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-//                        System.out.println("====transection " + response);
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            total = Integer.parseInt(objectbject.getString(Constant.TOTAL));
-                            session.setData(Constant.TOTAL, String.valueOf(total));
+        ApiConfig.RequestToVolley((result, response) -> {
+                    if (result) {
+                        try {
+//                        System.out.println("====transaction " + response);
+                            JSONObject jsonObject = new JSONObject(response);
+                            if (!jsonObject.getBoolean(Constant.ERROR)) {
+                                total = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
+                                session.setData(Constant.TOTAL, String.valueOf(total));
 
-                            JSONObject object = new JSONObject(response);
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                                JSONObject object = new JSONObject(response);
+                                JSONArray jsonArray = object.getJSONArray(Constant.DATA);
 
-                            Gson g = new Gson();
+                                Gson g = new Gson();
 
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                                for (int i = 0; i < jsonArray.length(); i++) {
+                                    JSONObject jsonObject1 = jsonArray.getJSONObject(i);
 
-                                if (jsonObject1 != null) {
-                                    Faq faq = g.fromJson(jsonObject1.toString(), Faq.class);
-                                    Faqs.add(faq);
-                                } else {
-                                    break;
+                                    if (jsonObject1 != null) {
+                                        Faq faq = g.fromJson(jsonObject1.toString(), Faq.class);
+                                        Faqs.add(faq);
+                                    } else {
+                                        break;
+                                    }
+
                                 }
-
-                            }
-                            if (offset == 0) {
-                                FaqAdapter = new FaqAdapter(activity, Faqs);
-                                FaqAdapter.setHasStableIds(true);
-                                recyclerView.setAdapter(FaqAdapter);
-                                mShimmerViewContainer.stopShimmer();
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                recyclerView.setVisibility(View.VISIBLE);
-                                scrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
-                                    @Override
-                                    public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                                if (offset == 0) {
+                                    FaqAdapter = new FaqAdapter(activity, Faqs);
+                                    recyclerView.setAdapter(FaqAdapter);
+                                    mShimmerViewContainer.stopShimmer();
+                                    mShimmerViewContainer.setVisibility(View.GONE);
+                                    recyclerView.setVisibility(View.VISIBLE);
+                                    scrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
 
                                         // if (diff == 0) {
                                         if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
-                                            LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+                                            LinearLayoutManager linearLayoutManager1 = (LinearLayoutManager) recyclerView.getLayoutManager();
                                             if (Faqs.size() < total) {
                                                 if (!isLoadMore) {
-                                                    if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == Faqs.size() - 1) {
+                                                    if (linearLayoutManager1 != null && linearLayoutManager1.findLastCompletelyVisibleItemPosition() == Faqs.size() - 1) {
                                                         //bottom of list!
                                                         Faqs.add(null);
                                                         FaqAdapter.notifyItemInserted(Faqs.size() - 1);
 
                                                         offset += Constant.LOAD_ITEM_LIMIT;
-                                                        Map<String, String> params = new HashMap<>();
-                                                        params.put(Constant.GET_FAQS, Constant.GetVal);
-                                                        params.put(Constant.OFFSET, "" + offset);
-                                                        params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT + 10);
+                                                        Map<String, String> params1 = new HashMap<>();
+                                                        params1.put(Constant.GET_FAQS, Constant.GetVal);
+                                                        params1.put(Constant.OFFSET, "" + offset);
+                                                        params1.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT + 10);
 
-                                                        ApiConfig.RequestToVolley(new VolleyCallback() {
-                                                            @Override
-                                                            public void onSuccess(boolean result, String response) {
+                                                        ApiConfig.RequestToVolley((result1, response1) -> {
 
-                                                                if (result) {
-                                                                    try {
-                                                                        // System.out.println("====product  " + response);
-                                                                        JSONObject objectbject1 = new JSONObject(response);
-                                                                        if (!objectbject1.getBoolean(Constant.ERROR)) {
+                                                            if (result1) {
+                                                                try {
+                                                                    // System.out.println("====product  " + response);
+                                                                    JSONObject jsonObject2 = new JSONObject(response1);
+                                                                    if (!jsonObject2.getBoolean(Constant.ERROR)) {
 
-                                                                            session.setData(Constant.TOTAL, objectbject1.getString(Constant.TOTAL));
+                                                                        session.setData(Constant.TOTAL, jsonObject2.getString(Constant.TOTAL));
 
-                                                                            Faqs.remove(Faqs.size() - 1);
-                                                                            FaqAdapter.notifyItemRemoved(Faqs.size());
+                                                                        Faqs.remove(Faqs.size() - 1);
+                                                                        FaqAdapter.notifyItemRemoved(Faqs.size());
 
-                                                                            JSONObject object = new JSONObject(response);
-                                                                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                                                                        JSONObject object1 = new JSONObject(response1);
+                                                                        JSONArray jsonArray1 = object1.getJSONArray(Constant.DATA);
 
-                                                                            Gson g = new Gson();
+                                                                        Gson g1 = new Gson();
 
 
-                                                                            for (int i = 0; i < jsonArray.length(); i++) {
-                                                                                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                                                                        for (int i = 0; i < jsonArray1.length(); i++) {
+                                                                            JSONObject jsonObject1 = jsonArray1.getJSONObject(i);
 
-                                                                                if (jsonObject1 != null) {
-                                                                                    Faq Faq = g.fromJson(jsonObject1.toString(), Faq.class);
-                                                                                    Faqs.add(Faq);
-                                                                                } else {
-                                                                                    break;
-                                                                                }
-
+                                                                            if (jsonObject1 != null) {
+                                                                                Faq Faq = g1.fromJson(jsonObject1.toString(), Faq.class);
+                                                                                Faqs.add(Faq);
+                                                                            } else {
+                                                                                break;
                                                                             }
-                                                                            FaqAdapter.notifyDataSetChanged();
-                                                                            FaqAdapter.setLoaded();
-                                                                            isLoadMore = false;
+
                                                                         }
-                                                                    } catch (JSONException e) {
-                                                                        mShimmerViewContainer.stopShimmer();
-                                                                        mShimmerViewContainer.setVisibility(View.GONE);
-                                                                        recyclerView.setVisibility(View.VISIBLE);
+                                                                        FaqAdapter.notifyDataSetChanged();
+                                                                        isLoadMore = false;
                                                                     }
+                                                                } catch (JSONException e) {
+                                                                    mShimmerViewContainer.stopShimmer();
+                                                                    mShimmerViewContainer.setVisibility(View.GONE);
+                                                                    recyclerView.setVisibility(View.VISIBLE);
                                                                 }
                                                             }
-                                                        }, activity, Constant.FAQ_URL, params, false);
+                                                        }, activity, Constant.FAQ_URL, params1, false);
 
                                                     }
                                                     isLoadMore = true;
                                                 }
                                             }
                                         }
-                                    }
-                                });
+                                    });
+                                }
+                            } else {
+                                recyclerView.setVisibility(View.GONE);
+                                tvAlert.setVisibility(View.VISIBLE);
+                                mShimmerViewContainer.stopShimmer();
+                                mShimmerViewContainer.setVisibility(View.GONE);
+                                recyclerView.setVisibility(View.VISIBLE);
                             }
-                        } else {
-                            recyclerView.setVisibility(View.GONE);
-                            tvAlert.setVisibility(View.VISIBLE);
+                        } catch (JSONException e) {
                             mShimmerViewContainer.stopShimmer();
                             mShimmerViewContainer.setVisibility(View.GONE);
                             recyclerView.setVisibility(View.VISIBLE);
                         }
-                    } catch (JSONException e) {
-                        mShimmerViewContainer.stopShimmer();
-                        mShimmerViewContainer.setVisibility(View.GONE);
-                        recyclerView.setVisibility(View.VISIBLE);
-                    }
 
-                }
-            }
-        }, activity, Constant.FAQ_URL, params, false);
+                    }
+                },
+                activity,
+                Constant.FAQ_URL,
+                params,
+                false);
     }
 
     @Override
@@ -240,12 +231,13 @@ public class FaqFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.toolbar_cart).setVisible(false);
         menu.findItem(R.id.toolbar_sort).setVisible(false);

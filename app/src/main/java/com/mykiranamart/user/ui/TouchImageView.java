@@ -8,7 +8,8 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
-import android.view.View;
+
+
 
 public class TouchImageView extends androidx.appcompat.widget.AppCompatImageView {
     // We can be in one of these 3 states
@@ -21,7 +22,6 @@ public class TouchImageView extends androidx.appcompat.widget.AppCompatImageView
     private final PointF start = new PointF();
     private Matrix matrix;
     private int mode = NONE;
-    private float maxScale = 3f;
     private float[] m;
     private int viewWidth;
     private int viewHeight;
@@ -51,52 +51,47 @@ public class TouchImageView extends androidx.appcompat.widget.AppCompatImageView
         setImageMatrix(matrix);
         setScaleType(ScaleType.MATRIX);
 
-        setOnTouchListener(new OnTouchListener() {
+        setOnTouchListener((v, event) -> {
 
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
+            mScaleDetector.onTouchEvent(event);
+            PointF curr = new PointF(event.getX(), event.getY());
+            switch (event.getAction()) {
 
-                mScaleDetector.onTouchEvent(event);
-                PointF curr = new PointF(event.getX(), event.getY());
-                switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    last.set(curr);
+                    start.set(last);
+                    mode = DRAG;
+                    break;
 
-                    case MotionEvent.ACTION_DOWN:
-                        last.set(curr);
-                        start.set(last);
-                        mode = DRAG;
-                        break;
+                case MotionEvent.ACTION_MOVE:
+                    if (mode == DRAG) {
+                        float deltaX = curr.x - last.x;
+                        float deltaY = curr.y - last.y;
+                        float fixTransX = getFixDragTrans(deltaX, viewWidth, origWidth * saveScale);
+                        float fixTransY = getFixDragTrans(deltaY, viewHeight, origHeight * saveScale);
+                        matrix.postTranslate(fixTransX, fixTransY);
+                        fixTrans();
+                        last.set(curr.x, curr.y);
+                    }
 
-                    case MotionEvent.ACTION_MOVE:
-                        if (mode == DRAG) {
-                            float deltaX = curr.x - last.x;
-                            float deltaY = curr.y - last.y;
-                            float fixTransX = getFixDragTrans(deltaX, viewWidth, origWidth * saveScale);
-                            float fixTransY = getFixDragTrans(deltaY, viewHeight, origHeight * saveScale);
-                            matrix.postTranslate(fixTransX, fixTransY);
-                            fixTrans();
-                            last.set(curr.x, curr.y);
-                        }
+                    break;
 
-                        break;
+                case MotionEvent.ACTION_UP:
+                    mode = NONE;
+                    int xDiff = (int) Math.abs(curr.x - start.x);
+                    int yDiff = (int) Math.abs(curr.y - start.y);
+                    if (xDiff < CLICK && yDiff < CLICK)
+                        performClick();
+                    break;
 
-                    case MotionEvent.ACTION_UP:
-                        mode = NONE;
-                        int xDiff = (int) Math.abs(curr.x - start.x);
-                        int yDiff = (int) Math.abs(curr.y - start.y);
-                        if (xDiff < CLICK && yDiff < CLICK)
-                            performClick();
-                        break;
-
-                    case MotionEvent.ACTION_POINTER_UP:
-                        mode = NONE;
-                        break;
-                }
-
-                setImageMatrix(matrix);
-                invalidate();
-                return true; // indicate event was handled
+                case MotionEvent.ACTION_POINTER_UP:
+                    mode = NONE;
+                    break;
             }
 
+            setImageMatrix(matrix);
+            invalidate();
+            return true; // indicate event was handled
         });
     }
 
@@ -194,6 +189,7 @@ public class TouchImageView extends androidx.appcompat.widget.AppCompatImageView
             float origScale = saveScale;
             saveScale *= mScaleFactor;
             float minScale = 1f;
+            float maxScale = 3f;
             if (saveScale > maxScale) {
                 saveScale = maxScale;
                 mScaleFactor = maxScale / origScale;

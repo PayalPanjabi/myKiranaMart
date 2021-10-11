@@ -4,6 +4,8 @@ package com.mykiranamart.user.helper;
 import android.content.Intent;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -37,38 +39,49 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
             String type = data.getString("type");
             String title = data.getString("title");
-            String message = data.getString("message");
+            String message = data.getString(Constant.MESSAGE);
             String imageUrl = data.getString("image");
             String id = data.getString("id");
 
             Intent intent = new Intent(getApplicationContext(), MainActivity.class);
 
-            if (type.equals("category")) {
+            switch (type) {
+                case "category":
 
-                intent.putExtra("id", id);
-                intent.putExtra("name", title);
-                intent.putExtra(Constant.FROM, type);
+                    intent.putExtra("id", id);
+                    intent.putExtra("name", title);
+                    intent.putExtra(Constant.FROM, type);
 
-            } else if (type.equals("product")) {
+                    break;
+                case "product":
 
-                intent.putExtra("id", id);
-                intent.putExtra("vpos", 0);
-                intent.putExtra(Constant.FROM, type);
+                    intent.putExtra("id", id);
+                    intent.putExtra("variantPosition", 0);
+                    intent.putExtra(Constant.FROM, type);
 
-            } else if (type.equals("order")) {
-                intent.putExtra(Constant.FROM, type);
-                intent.putExtra("model", "");
-                intent.putExtra("id", id);
-            } else {
-                intent.putExtra(Constant.FROM, "");
+                    break;
+                case "order":
+                    intent.putExtra(Constant.FROM, type);
+                    intent.putExtra("model", "");
+                    intent.putExtra("id", id);
+                    break;
+                default:
+                    intent.putExtra(Constant.FROM, "");
+                    break;
             }
 
-            if (type.equals("payment_transaction")) {
-                Session.setCount(Constant.UNREAD_TRANSACTION_COUNT, (Session.getCount(Constant.UNREAD_TRANSACTION_COUNT, getApplicationContext()) + 1), getApplicationContext());
-            } else if (type.equals("wallet_transaction")) {
-                Session.setCount(Constant.UNREAD_WALLET_COUNT, (Session.getCount(Constant.UNREAD_WALLET_COUNT, getApplicationContext()) + 1), getApplicationContext());
-            } else if (type.equals("default") || type.equals("category") || type.equals("product")) {
-                Session.setCount(Constant.UNREAD_NOTIFICATION_COUNT, (Session.getCount(Constant.UNREAD_NOTIFICATION_COUNT, getApplicationContext()) + 1), getApplicationContext());
+            switch (type) {
+                case "payment_transaction":
+                    Session.setCount(Constant.UNREAD_TRANSACTION_COUNT, (Session.getCount(Constant.UNREAD_TRANSACTION_COUNT, getApplicationContext()) + 1), getApplicationContext());
+                    break;
+                case "wallet_transaction":
+                    Session.setCount(Constant.UNREAD_WALLET_COUNT, (Session.getCount(Constant.UNREAD_WALLET_COUNT, getApplicationContext()) + 1), getApplicationContext());
+                    break;
+                case "default":
+                case "category":
+                case "product":
+                    Session.setCount(Constant.UNREAD_NOTIFICATION_COUNT, (Session.getCount(Constant.UNREAD_NOTIFICATION_COUNT, getApplicationContext()) + 1), getApplicationContext());
+                    break;
             }
 
             MyNotificationManager mNotificationManager = new MyNotificationManager(getApplicationContext());
@@ -89,7 +102,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     @Override
-    public void onNewToken(String s) {
+    public void onNewToken(@NonNull String s) {
         super.onNewToken(s);
     }
 

@@ -13,17 +13,35 @@
         <item name="android:windowContentTransitions">true</item>
     </style>
 
-    <style name="TabLayoutStyle" parent="@android:style/TextAppearance.Widget.TabWidget">
-        <item name="android:textSize">15sp</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="android:textStyle">bold</item>
+    <!--Tab custom layout-->
+    <style name="AppTabLayout" parent="Widget.Design.TabLayout">
+        <item name="tabTextAppearance">@style/AppTabTextAppearance</item>
+        <item name="tabMode">scrollable</item>
+        <item name="tabIndicatorHeight">0dp</item>
+        <item name="tabBackground">@drawable/tab_background</item>
+        <item name="tabSelectedTextColor">@color/colorPrimary</item>
+        <item name="rippleColor">@color/transparent</item>
+        <item name="tabRippleColor">@color/transparent</item>
+        <item name="itemRippleColor">@color/transparent</item>
+        <item name="tabUnboundedRipple">@color/transparent</item>
     </style>
+
+    <!-- for text -->
+    <style name="AppTabTextAppearance" parent="TextAppearance.Design.Tab">
+        <item name="android:textColor">@color/gray</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAppearance">@style/TextAppearance.AppCompat.Small</item>
+        <item name="textAllCaps">false</item>
+    </style>
+    <!-- for text -->
 
     <style name="BottomSheetTheme" parent="Theme.Design.Light.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/BottomSheetStyle</item>
     </style>
+
     <style name="BottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
     </style>
+
 
 </resources>

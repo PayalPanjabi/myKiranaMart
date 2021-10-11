@@ -12,6 +12,7 @@ import com.mykiranamart.user.R;
 
 public class ProgressDisplay {
 
+    @SuppressLint("StaticFieldLeak")
     public static ProgressBar mProgressBar;
 
     @SuppressLint("UseCompatLoadingForDrawables")
@@ -32,7 +33,7 @@ public class ProgressDisplay {
             layout.addView(rl, params);
             hideProgress();
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 

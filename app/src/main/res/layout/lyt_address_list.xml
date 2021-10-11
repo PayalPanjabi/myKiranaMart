@@ -15,6 +15,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="top"
         android:layout_marginEnd="@dimen/_5sdp"
+        android:contentDescription="@string/app_name"
         android:src="@drawable/ic_uncheck_circle" />
 
     <LinearLayout
@@ -28,9 +29,10 @@
 
             <TextView
                 android:id="@+id/tvName"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
+                android:layout_toStartOf="@id/tvAddressType"
+                android:textAlignment="viewStart"
                 android:textColor="@color/colorPrimary"
                 android:textSize="@dimen/_12ssp"
                 android:textStyle="bold" />
@@ -39,12 +41,12 @@
                 android:id="@+id/tvAddressType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
                 android:layout_marginStart="@dimen/_10sdp"
-                android:layout_toEndOf="@id/tvName"
+                android:layout_toStartOf="@id/tvDefaultAddress"
                 android:background="@drawable/right_btn_bg"
                 android:paddingStart="@dimen/dimen_10dp"
                 android:paddingEnd="@dimen/dimen_10dp"
+                android:textAlignment="viewStart"
                 android:textColor="@color/white"
                 android:textSize="@dimen/_12ssp" />
 
@@ -52,13 +54,13 @@
                 android:id="@+id/tvDefaultAddress"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
                 android:layout_marginStart="@dimen/_10sdp"
-                android:layout_toEndOf="@id/tvAddressType"
                 android:background="@drawable/right_btn_bg"
                 android:paddingStart="@dimen/dimen_10dp"
                 android:paddingEnd="@dimen/dimen_10dp"
                 android:text="@string/default_address"
+                android:layout_toStartOf="@id/imgEdit"
+                android:textAlignment="viewStart"
                 android:textColor="@color/white"
                 android:textSize="@dimen/_12ssp"
                 android:visibility="gone" />
@@ -69,6 +71,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="@dimen/dimen_5dp"
                 android:layout_toStartOf="@id/imgDelete"
+                android:contentDescription="@string/app_name"
                 app:srcCompat="@drawable/ic_edit" />
 
             <ImageView
@@ -76,6 +79,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
+                android:contentDescription="@string/app_name"
                 app:srcCompat="@drawable/ic_delete1"
                 app:tint="@color/gray" />
         </RelativeLayout>
@@ -86,14 +90,15 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/dimen_7dp"
             android:maxLines="1"
-            android:textColor="@color/overlay_white" />
+            android:textAlignment="viewStart"
+            android:textColor="@color/dark_gray" />
 
         <TextView
             android:id="@+id/tvMobile"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
             android:layout_marginTop="@dimen/dimen_7dp"
+            android:textAlignment="viewStart"
             android:textColor="@color/dark_gray" />
 
     </LinearLayout>

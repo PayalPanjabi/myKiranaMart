@@ -4,12 +4,13 @@
     xmlns:shimmer="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
+    android:background="@color/bg_color"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    shimmer:ignore="Overdraw">
 
     <TextView
-        android:id="@+id/txtstatus"
+        android:id="@+id/tvStatus"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
@@ -17,6 +18,7 @@
         android:layout_marginBottom="10dp"
         android:fontFamily="@font/open_sans_bold"
         android:text="@string/sold_out"
+        android:textAlignment="viewStart"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
         android:textColor="@color/red"
         android:textStyle="bold"
@@ -26,7 +28,7 @@
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/txtstatus"
+        android:layout_below="@id/tvStatus"
         android:layout_marginBottom="@dimen/dimen_50dp"
         android:scrollbars="none"
         android:visibility="visible">
@@ -57,26 +59,6 @@
                     android:layout_centerHorizontal="true"
                     android:orientation="horizontal" />
 
-                <RelativeLayout
-                    android:id="@+id/lytDiscount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="@dimen/_5sdp"
-                    android:background="@drawable/ic_offer"
-                    android:padding="@dimen/_3sdp">
-
-                    <TextView
-                        android:id="@+id/showDiscount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerInParent="true"
-                        android:layout_margin="@dimen/_1sdp"
-                        android:textColor="@color/white"
-                        android:textSize="@dimen/_10ssp"
-                        android:textStyle="bold" />
-
-                </RelativeLayout>
-
                 <ImageView
                     android:id="@+id/imgIndicator"
                     android:layout_width="@dimen/_20sdp"
@@ -84,7 +66,22 @@
                     android:layout_alignParentTop="true"
                     android:layout_alignParentEnd="true"
                     android:layout_margin="@dimen/_5sdp"
+                    android:contentDescription="@string/app_name"
                     android:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/showDiscount"
+                    android:layout_width="@dimen/_30sdp"
+                    android:layout_height="@dimen/_30sdp"
+                    android:layout_margin="@dimen/_3sdp"
+                    android:background="@drawable/ic_offer"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:textAlignment="center"
+                    android:textColor="@color/white"
+                    android:textSize="@dimen/_10sdp"
+                    android:typeface="sans" />
             </RelativeLayout>
 
             <LinearLayout
@@ -96,10 +93,12 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/_5sdp"
+                    android:baselineAligned="false"
                     android:weightSum="3">
 
                     <LinearLayout
-                        android:id="@+id/lytsave"
+                        android:id="@+id/lytSave"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -117,6 +116,7 @@
                                 android:layout_width="@dimen/_20sdp"
                                 android:layout_height="@dimen/_20sdp"
                                 android:layout_centerInParent="true"
+                                android:contentDescription="@string/app_name"
                                 app:srcCompat="@drawable/ic_is_not_favorite" />
 
                             <com.airbnb.lottie.LottieAnimationView
@@ -133,22 +133,25 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="5dp"
                             android:text="@string/fav_text"
+                            android:textAlignment="viewStart"
                             android:textSize="@dimen/_10sdp" />
                     </LinearLayout>
 
                     <LinearLayout
-                        android:id="@+id/lytshare"
+                        android:id="@+id/lytShare"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:gravity="center"
                         android:orientation="horizontal"
                         android:paddingTop="5dp"
-                        android:paddingBottom="5dp">
+                        android:paddingBottom="5dp"
+                        shimmer:ignore="UseCompoundDrawables">
 
                         <ImageView
                             android:layout_width="@dimen/_20sdp"
                             android:layout_height="@dimen/_20sdp"
+                            android:contentDescription="@string/app_name"
                             app:srcCompat="@drawable/ic_share" />
 
                         <TextView
@@ -156,6 +159,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="5dp"
                             android:text="@string/share_text"
+                            android:textAlignment="viewStart"
                             android:textSize="@dimen/_10sdp" />
                     </LinearLayout>
 
@@ -167,34 +171,71 @@
                         android:gravity="center"
                         android:orientation="horizontal"
                         android:paddingTop="5dp"
-                        android:paddingBottom="5dp">
+                        android:paddingBottom="5dp"
+                        shimmer:ignore="UseCompoundDrawables">
 
                         <ImageView
                             android:layout_width="@dimen/_20sdp"
                             android:layout_height="@dimen/_20sdp"
+                            android:contentDescription="@string/app_name"
                             app:srcCompat="@drawable/ic_similar" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="5dp"
-                            android:text="@string/similarproduct"
+                            android:text="@string/similar_product"
+                            android:textAlignment="viewStart"
                             android:textSize="@dimen/_10sdp" />
                     </LinearLayout>
 
                 </LinearLayout>
+
+
+                <RelativeLayout
+                    android:id="@+id/lytTimer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="@dimen/dimen_10dp"
+                    android:visibility="gone"
+                    android:weightSum="2">
+
+                    <TextView
+                        android:id="@+id/tvTimerTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentStart="true"
+                        android:lines="1"
+                        android:text="@string/ends_in"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/colorPrimary"
+                        android:textSize="@dimen/_14ssp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvTimer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_toEndOf="@id/tvTimerTitle"
+                        android:lines="1"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/colorPrimary"
+                        android:textSize="@dimen/_14ssp"
+                        android:textStyle="bold" />
+                </RelativeLayout>
 
                 <RelativeLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content">
 
                     <TextView
-                        android:id="@+id/txtproductname"
+                        android:id="@+id/tvProductName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_alignParentStart="true"
-                        android:layout_toStartOf="@id/txtmeasurement"
+                        android:layout_toStartOf="@id/tvMeasurement"
                         android:ellipsize="end"
+                        android:textAlignment="viewStart"
                         android:textColor="@color/black"
                         android:textSize="@dimen/_12ssp"
                         android:textStyle="bold" />
@@ -203,7 +244,7 @@
                         android:id="@+id/lytProductRatings"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_below="@id/txtproductname"
+                        android:layout_below="@id/tvProductName"
                         android:orientation="horizontal">
 
                         <RatingBar
@@ -224,24 +265,26 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="@dimen/_5sdp"
+                            android:textAlignment="viewStart"
                             android:textColor="@color/black"
                             android:textSize="@dimen/_9sdp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/txtmeasurement"
+                        android:id="@+id/tvMeasurement"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_alignParentEnd="true"
                         android:layout_marginStart="5dp"
                         android:layout_marginEnd="5dp"
+                        android:textAlignment="viewStart"
                         android:textColor="@color/black" />
 
                 </RelativeLayout>
 
                 <RelativeLayout
-                    android:id="@+id/lytmainprice"
+                    android:id="@+id/lytMainPrice"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp">
@@ -252,6 +295,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/_5sdp"
                         android:layout_marginBottom="@dimen/_5sdp"
+                        android:baselineAligned="false"
                         android:orientation="horizontal"
                         android:weightSum="2">
 
@@ -262,18 +306,22 @@
                             android:orientation="horizontal">
 
                             <TextView
-                                android:id="@+id/txtprice"
+                                android:id="@+id/tvPrice"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:padding="1dp"
+                                android:textAlignment="viewStart"
                                 android:textColor="@color/black"
                                 android:textStyle="bold" />
 
                             <TextView
-                                android:id="@+id/txtoriginalprice"
+                                android:id="@+id/tvOriginalPrice"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="3dp" />
+                                android:layout_marginStart="3dp"
+                                android:layout_marginEnd="3dp"
+                                android:textAlignment="viewStart" />
+
                         </LinearLayout>
 
                         <LinearLayout
@@ -299,13 +347,14 @@
                         android:layout_width="match_parent"
                         android:layout_height="3dp"
                         android:layout_below="@id/lytPrice"
-                        android:background="@color/bggray" />
+                        android:background="@color/bg_gray" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_below="@id/viewPrice"
                         android:layout_marginTop="@dimen/dimen_5dp"
+                        android:baselineAligned="false"
                         android:orientation="horizontal"
                         android:weightSum="2">
 
@@ -313,12 +362,14 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:orientation="vertical"
+                            shimmer:ignore="UseCompoundDrawables">
 
                             <ImageView
                                 android:id="@+id/imgReturnable"
                                 android:layout_width="wrap_content"
-                                android:layout_height="wrap_content" />
+                                android:layout_height="wrap_content"
+                                android:contentDescription="@string/app_name" />
 
                             <TextView
                                 android:id="@+id/tvReturnable"
@@ -336,12 +387,14 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:orientation="vertical"
+                            shimmer:ignore="UseCompoundDrawables">
 
                             <ImageView
                                 android:id="@+id/imgCancellable"
                                 android:layout_width="wrap_content"
-                                android:layout_height="wrap_content" />
+                                android:layout_height="wrap_content"
+                                android:contentDescription="@string/app_name" />
 
                             <TextView
                                 android:id="@+id/tvCancellable"
@@ -361,10 +414,10 @@
                     android:id="@+id/view"
                     android:layout_width="match_parent"
                     android:layout_height="3dp"
-                    android:background="@color/bggray" />
+                    android:background="@color/bg_gray" />
 
                 <RelativeLayout
-                    android:id="@+id/lytqty"
+                    android:id="@+id/lytQuantity"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical">
@@ -375,8 +428,8 @@
                         android:layout_centerVertical="true"
                         android:layout_marginTop="10dp"
                         android:layout_marginBottom="10dp"
-                        android:gravity="center_vertical"
                         android:text="@string/quantity"
+                        android:textAlignment="viewStart"
                         android:textColor="@color/black"
                         android:textStyle="bold" />
 
@@ -401,29 +454,32 @@
                             android:textStyle="bold" />
 
                         <ImageButton
-                            android:id="@+id/btnminusqty"
+                            android:id="@+id/btnMinusQty"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:background="@android:color/transparent"
+                            android:contentDescription="@string/app_name"
                             android:padding="7dp"
                             app:srcCompat="@drawable/ic_remove" />
 
                         <TextView
-                            android:id="@+id/txtqty"
+                            android:id="@+id/tvQuantity"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:layout_marginEnd="10dp"
+                            android:textAlignment="viewStart"
                             android:textAppearance="@style/Base.TextAppearance.AppCompat.Medium"
                             android:textColor="@color/black"
                             android:textStyle="bold" />
 
                         <ImageButton
-                            android:id="@+id/btnaddqty"
+                            android:id="@+id/btnAddQty"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
 
                             android:background="@android:color/transparent"
+                            android:contentDescription="@string/app_name"
                             android:padding="7dp"
                             app:srcCompat="@drawable/ic_add" />
                     </LinearLayout>
@@ -433,7 +489,7 @@
                         android:layout_height="3dp"
                         android:layout_alignParentBottom="true"
                         android:layout_marginTop="@dimen/_3sdp"
-                        android:background="@color/bggray" />
+                        android:background="@color/bg_gray" />
 
                 </RelativeLayout>
 
@@ -443,6 +499,7 @@
                     android:layout_gravity="start"
                     android:layout_marginTop="5dp"
                     android:text="@string/product_details"
+                    android:textAlignment="viewStart"
                     android:textColor="@color/black"
                     android:textStyle="bold" />
 
@@ -450,6 +507,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="5dp"
+                    android:baselineAligned="false"
                     android:orientation="horizontal"
                     android:weightSum="2">
 
@@ -467,9 +525,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:layout_marginBottom="5dp"
-                            android:layout_weight="1"
                             android:text="@string/title_manufacturer"
-                            android:textAlignment="gravity"
+                            android:textAlignment="viewStart"
                             android:textColor="@color/txt_color"
                             android:textSize="14sp" />
 
@@ -480,16 +537,15 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:layout_marginBottom="5dp"
-                            android:layout_weight="1"
                             android:maxLines="1"
-                            android:textAlignment="gravity"
+                            android:textAlignment="viewStart"
                             android:textColor="@color/colorPrimary"
                             android:textSize="14sp" />
 
                         <View
                             android:layout_width="match_parent"
                             android:layout_height="3dp"
-                            android:background="@color/bggray" />
+                            android:background="@color/bg_gray" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -506,9 +562,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:layout_marginBottom="5dp"
-                            android:layout_weight="1"
                             android:text="@string/title_made_in"
-                            android:textAlignment="gravity"
+                            android:textAlignment="viewStart"
                             android:textColor="@color/txt_color"
                             android:textSize="14sp" />
 
@@ -518,16 +573,15 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:layout_marginBottom="5dp"
-                            android:layout_weight="1"
                             android:maxLines="1"
-                            android:textAlignment="gravity"
+                            android:textAlignment="viewStart"
                             android:textColor="@color/colorPrimary"
                             android:textSize="14sp" />
 
                         <View
                             android:layout_width="match_parent"
                             android:layout_height="3dp"
-                            android:background="@color/bggray" />
+                            android:background="@color/bg_gray" />
 
                     </LinearLayout>
 
@@ -547,13 +601,13 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/dimen_5dp"
                 android:padding="@dimen/dimen_5dp"
-                android:visibility="visible">
+                android:visibility="gone">
 
                 <View
                     android:id="@+id/viewReview"
                     android:layout_width="match_parent"
                     android:layout_height="3dp"
-                    android:background="@color/bggray" />
+                    android:background="@color/bg_gray" />
 
                 <RelativeLayout
                     android:id="@+id/lytReviewTitle"
@@ -572,6 +626,7 @@
                         android:paddingTop="@dimen/_5sdp"
                         android:paddingBottom="@dimen/_5sdp"
                         android:text="@string/customer_reviews"
+                        android:textAlignment="viewStart"
                         android:textColor="@color/colorPrimary"
                         android:textSize="@dimen/_12ssp"
                         android:textStyle="bold" />
@@ -601,6 +656,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="@dimen/_5sdp"
+                            android:textAlignment="viewStart"
                             android:textColor="@color/black"
                             android:textSize="@dimen/_9sdp"
                             android:textStyle="bold" />
@@ -615,6 +671,7 @@
                         android:layout_marginTop="@dimen/_5sdp"
                         android:layout_marginEnd="@dimen/_10sdp"
                         android:layout_toStartOf="@+id/tvMoreReview"
+                        android:textAlignment="viewStart"
                         android:textColor="@color/txt_color"
                         android:textSize="@dimen/_10ssp"
                         android:textStyle="bold" />
@@ -625,9 +682,9 @@
                         android:layout_height="wrap_content"
                         android:layout_alignParentEnd="true"
                         android:layout_marginEnd="@dimen/_10sdp"
-                        android:gravity="center_vertical"
                         android:padding="5dp"
                         android:text="@string/view_all"
+                        android:textAlignment="viewStart"
                         android:textColor="@color/colorSecondary"
                         android:textSize="@dimen/_12ssp"
                         android:textStyle="bold" />
@@ -639,7 +696,7 @@
                     android:layout_height="wrap_content"
                     android:layout_below="@+id/lytReviewTitle"
                     android:layout_marginTop="@dimen/dimen_5dp"
-                    android:background="@drawable/default_bg"
+                    android:background="@color/bg_color"
                     android:nestedScrollingEnabled="false" />
             </RelativeLayout>
 
@@ -655,7 +712,7 @@
                     android:id="@+id/viewSimilar"
                     android:layout_width="match_parent"
                     android:layout_height="3dp"
-                    android:background="@color/bggray" />
+                    android:background="@color/bg_gray" />
 
                 <RelativeLayout
                     android:id="@+id/titleLyt1"
@@ -672,11 +729,12 @@
                         android:layout_centerVertical="true"
                         android:layout_marginEnd="@dimen/_10sdp"
                         android:layout_toStartOf="@+id/tvMore"
-                        android:gravity="center_vertical"
-                        android:text="@string/similarproduct"
+                        android:text="@string/similar_product"
+                        android:textAlignment="viewStart"
                         android:textColor="@color/colorPrimary"
                         android:textSize="@dimen/_12ssp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        shimmer:ignore="TooManyViews" />
 
                     <TextView
                         android:id="@+id/tvMore"
@@ -685,9 +743,9 @@
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
                         android:layout_marginEnd="@dimen/_10sdp"
-                        android:gravity="center_vertical"
                         android:padding="5dp"
                         android:text="@string/view_all"
+                        android:textAlignment="viewStart"
                         android:textColor="@color/colorSecondary"
                         android:textSize="@dimen/_12ssp"
                         android:textStyle="bold" />
@@ -700,7 +758,8 @@
                     android:layout_below="@+id/titleLyt1"
                     android:layout_marginTop="@dimen/dimen_5dp"
                     android:background="@drawable/default_bg"
-                    android:nestedScrollingEnabled="false" />
+                    android:nestedScrollingEnabled="false"
+                    shimmer:ignore="TooManyViews" />
             </RelativeLayout>
 
         </LinearLayout>

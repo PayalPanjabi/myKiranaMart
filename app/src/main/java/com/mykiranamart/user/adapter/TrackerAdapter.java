@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
@@ -37,7 +38,6 @@ public class TrackerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     final Activity activity;
     final ArrayList<OrderTracker> orderTrackerArrayList;
     final Context context;
-    public boolean isLoading;
 
 
     public TrackerAdapter(Context context, Activity activity, ArrayList<OrderTracker> orderTrackerArrayList) {
@@ -46,81 +46,75 @@ public class TrackerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         this.orderTrackerArrayList = orderTrackerArrayList;
     }
 
-    public void add(int position, OrderTracker item) {
-        orderTrackerArrayList.add(position, item);
-        notifyItemInserted(position);
-    }
-
-    public void setLoaded() {
-        isLoading = false;
-    }
-
+    @NonNull
     @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, final int viewType) {
-        if (viewType == VIEW_TYPE_ITEM) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.lyt_trackorder, parent, false);
-            return new TrackerHolderItems(view);
-        } else if (viewType == VIEW_TYPE_LOADING) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
-            return new ViewHolderLoading(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, final int viewType) {
+        View view;
+        switch (viewType) {
+            case (VIEW_TYPE_ITEM):
+                view = LayoutInflater.from(activity).inflate(R.layout.lyt_trackorder, parent, false);
+                return new HolderItems(view);
+            case (VIEW_TYPE_LOADING):
+                view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
+                return new ViewHolderLoading(view);
+            default:
+                throw new IllegalArgumentException("unexpected viewType: " + viewType);
         }
-
-        return null;
     }
 
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint("SetTextI18n")
     @Override
-    public void onBindViewHolder(RecyclerView.ViewHolder holderparent, final int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holderParent, final int position) {
 
-        if (holderparent instanceof TrackerHolderItems) {
-            final TrackerHolderItems holder = (TrackerHolderItems) holderparent;
+        if (holderParent instanceof HolderItems) {
+            final HolderItems holder = (HolderItems) holderParent;
             final OrderTracker order = orderTrackerArrayList.get(position);
-            holder.txtorderid.setText(activity.getString(R.string.order_number) + order.getOrder_id());
-            String[] date = order.getDate_added().split("\\s+");
-            holder.txtorderdate.setText(activity.getString(R.string.ordered_on) + date[0]);
-            holder.txtorderamount.setText(activity.getString(R.string.for_amount_on) + new Session(context).getData(Constant.currency) + ApiConfig.StringFormat(order.getTotal()));
+            try {
+                holder.tvOrderID.setText(activity.getString(R.string.order_number) + order.getOrder_id());
+                String[] date = order.getDate_added().split("\\s+");
+                holder.tvOrderDate.setText(activity.getString(R.string.ordered_on) + date[0]);
+                holder.txtOrderAmount.setText(activity.getString(R.string.for_amount_on) + new Session(context).getData(Constant.currency) + ApiConfig.StringFormat(order.getTotal()));
 
-            holder.carddetail.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
+                holder.tvCardDetail.setOnClickListener(v -> {
                     Fragment fragment = new TrackerDetailFragment();
                     Bundle bundle = new Bundle();
                     bundle.putString("id", "");
                     bundle.putSerializable("model", order);
                     fragment.setArguments(bundle);
                     MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
+                });
+
+                holder.status.setText(ApiConfig.toTitleCase(order.getStatus()));
+
+                if (order.getActiveStatus().equals(Constant.RECEIVED)) {
+                    holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.received_status_bg));
+                } else if (order.getActiveStatus().equals(Constant.SHIPPED)) {
+                    holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.shipped_status_bg));
+                } else if (order.getActiveStatus().equals(Constant.DELIVERED)) {
+                    holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.delivered_status_bg));
+                } else if (order.getActiveStatus().equals(Constant.CANCELLED)) {
+                    holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.returned_and_cancel_status_bg));
+                } else if (order.getActiveStatus().equals(Constant.RETURNED)) {
+                    holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.returned_and_cancel_status_bg));
+                } else if (order.getActiveStatus().equalsIgnoreCase(Constant.AWAITING_PAYMENT)) {
+                    holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.awaiting_status_bg));
+                    holder.status.setText(R.string.awaiting_payment);
                 }
-            });
 
-            holder.status.setText(ApiConfig.toTitleCase(order.getStatus()));
 
-            if (order.getActiveStatus().equals(Constant.RECEIVED)) {
-                holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.received_status_bg));
-            } else if (order.getActiveStatus().equals(Constant.SHIPPED)) {
-                holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.shipped_status_bg));
-            } else if (order.getActiveStatus().equals(Constant.DELIVERED)) {
-                holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.delivered_status_bg));
-            } else if (order.getActiveStatus().equals(Constant.CANCELLED)) {
-                holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.returned_and_cancel_status_bg));
-            } else if (order.getActiveStatus().equals(Constant.RETURNED)) {
-                holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.returned_and_cancel_status_bg));
-            } else if (order.getActiveStatus().equalsIgnoreCase(Constant.AWAITING_PAYMENT)) {
-                holder.cardView.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.awaiting_status_bg));
-                holder.status.setText(R.string.awaiting_payment);
+                ArrayList<String> items = new ArrayList<>();
+                for (int i = 0; i < order.getItemsList().size(); i++) {
+                    items.add(order.getItemsList().get(i).getName());
+                }
+                holder.tvItems.setText(Arrays.toString(items.toArray()).replace("]", "").replace("[", ""));
+                holder.tvTotalItems.setText(items.size() > 1 ? items.size() + activity.getString(R.string.items) : items.size() + activity.getString(R.string.item));
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-
-
-            ArrayList<String> items = new ArrayList<>();
-            for (int i = 0; i < order.getItemsList().size(); i++) {
-                items.add(order.getItemsList().get(i).getName());
-            }
-            holder.tvItems.setText(Arrays.toString(items.toArray()).replace("]", "").replace("[", ""));
-            holder.tvTotalItems.setText(items.size() + activity.getString(R.string.item));
-
-        } else if (holderparent instanceof ViewHolderLoading) {
-            ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderparent;
+        } else if (holderParent instanceof ViewHolderLoading) {
+            ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderParent;
             loadingViewHolder.progressBar.setIndeterminate(true);
         }
 
@@ -150,22 +144,22 @@ public class TrackerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
     }
 
-    public class TrackerHolderItems extends RecyclerView.ViewHolder {
-        final TextView txtorderid;
-        final TextView txtorderdate;
-        final TextView carddetail;
-        final TextView txtorderamount;
+    public static class HolderItems extends RecyclerView.ViewHolder {
+        final TextView tvOrderID;
+        final TextView tvOrderDate;
+        final TextView tvCardDetail;
+        final TextView txtOrderAmount;
         final TextView tvTotalItems;
         final TextView tvItems;
         final TextView status;
         final CardView cardView;
 
-        public TrackerHolderItems(View itemView) {
+        public HolderItems(View itemView) {
             super(itemView);
-            txtorderid = itemView.findViewById(R.id.txtorderid);
-            txtorderdate = itemView.findViewById(R.id.txtorderdate);
-            carddetail = itemView.findViewById(R.id.carddetail);
-            txtorderamount = itemView.findViewById(R.id.txtorderamount);
+            tvOrderID = itemView.findViewById(R.id.tvOrderID);
+            tvOrderDate = itemView.findViewById(R.id.tvOrderDate);
+            tvCardDetail = itemView.findViewById(R.id.tvCardDetail);
+            txtOrderAmount = itemView.findViewById(R.id.txtOrderAmount);
             tvTotalItems = itemView.findViewById(R.id.tvTotalItems);
             tvItems = itemView.findViewById(R.id.tvItems);
             status = itemView.findViewById(R.id.status);

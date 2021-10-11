@@ -2,7 +2,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:width="48dp"
     android:height="30dp"
-    android:autoMirrored="true"
     android:viewportWidth="200"
     android:viewportHeight="130">
     <path

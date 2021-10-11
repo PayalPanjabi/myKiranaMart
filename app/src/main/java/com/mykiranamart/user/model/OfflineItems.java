@@ -1,19 +1,22 @@
 package com.mykiranamart.user.model;
 
-import java.util.ArrayList;
+import java.io.Serializable;
 
-public class OfflineItems {
 
-    String id, product_id, type, measurement, measurement_unit_id, price, discounted_price, serve_for, stock, stock_unit_id, name, image, unit, cart_count;
-    ArrayList other_images;
+public class OfflineItems implements Serializable {
 
-    public String getCart_count() {
-        return cart_count;
-    }
-
-    public void setCart_count(String cart_count) {
-        this.cart_count = cart_count;
-    }
+    String id;
+    String product_id;
+    String type;
+    String measurement;
+    String price;
+    String discounted_price;
+    String serve_for;
+    String stock;
+    String name;
+    String image;
+    String unit;
+    String cart_count;
 
     public String getId() {
         return id;
@@ -43,18 +46,6 @@ public class OfflineItems {
         return measurement;
     }
 
-    public void setMeasurement(String measurement) {
-        this.measurement = measurement;
-    }
-
-    public String getMeasurement_unit_id() {
-        return measurement_unit_id;
-    }
-
-    public void setMeasurement_unit_id(String measurement_unit_id) {
-        this.measurement_unit_id = measurement_unit_id;
-    }
-
     public String getPrice() {
         return price;
     }
@@ -67,32 +58,12 @@ public class OfflineItems {
         return discounted_price;
     }
 
-    public void setDiscounted_price(String discounted_price) {
-        this.discounted_price = discounted_price;
-    }
-
     public String getServe_for() {
         return serve_for;
     }
 
-    public void setServe_for(String serve_for) {
-        this.serve_for = serve_for;
-    }
-
     public String getStock() {
         return stock;
-    }
-
-    public void setStock(String stock) {
-        this.stock = stock;
-    }
-
-    public String getStock_unit_id() {
-        return stock_unit_id;
-    }
-
-    public void setStock_unit_id(String stock_unit_id) {
-        this.stock_unit_id = stock_unit_id;
     }
 
     public String getName() {
@@ -111,19 +82,19 @@ public class OfflineItems {
         this.image = image;
     }
 
-    public ArrayList getOther_images() {
-        return other_images;
-    }
-
-    public void setOther_images(ArrayList other_images) {
-        this.other_images = other_images;
-    }
-
     public String getUnit() {
         return unit;
     }
 
     public void setUnit(String unit) {
         this.unit = unit;
+    }
+
+    public String getCart_count() {
+        return cart_count;
+    }
+
+    public void setCart_count(String cart_count) {
+        this.cart_count = cart_count;
     }
 }

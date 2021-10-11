@@ -57,7 +57,8 @@
     </com.facebook.shimmer.ShimmerFrameLayout>
 
     <TextView
-        android:id="@+id/nodata"
+                android:textAlignment="center"
+        android:id="@+id/tvNoData"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_margin="5dp"

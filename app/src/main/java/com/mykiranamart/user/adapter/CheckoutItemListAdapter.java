@@ -2,7 +2,6 @@ package com.mykiranamart.user.adapter;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,17 +27,15 @@ public class CheckoutItemListAdapter extends RecyclerView.Adapter<CheckoutItemLi
 
     public ArrayList<Cart> carts;
     public Activity activity;
-    Context context;
     Session session;
 
-    public CheckoutItemListAdapter(Context context, Activity activity, ArrayList<Cart> carts) {
+    public CheckoutItemListAdapter(Activity activity, ArrayList<Cart> carts) {
         try {
-            this.context = context;
             this.activity = activity;
             this.carts = carts;
-            session = new Session(context);
-        } catch (Exception ignored) {
-
+            session = new Session(activity);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -84,8 +81,8 @@ public class CheckoutItemListAdapter extends RecyclerView.Adapter<CheckoutItemLi
             } else {
                 holder.tvSubTotal.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + (Integer.parseInt(cart.getQty()) * (Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) + ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) * Float.parseFloat(taxPercentage)) / 100)))));
             }
-        } catch (Exception ignored) {
-
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

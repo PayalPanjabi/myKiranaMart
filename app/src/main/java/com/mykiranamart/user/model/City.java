@@ -1,33 +1,25 @@
 package com.mykiranamart.user.model;
 
 
-public class City {
-    final String city_name;
-    final String city_id;
-    String pincode;
+import java.io.Serializable;
 
-    public City(String city_id, String city_name) {
-        this.city_name = city_name;
-        this.city_id = city_id;
+public class City implements Serializable {
+    String name;
+    String id;
 
+    public String getName() {
+        return name;
     }
 
-    public String getCity_name() {
-        return city_name;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public String getCity_id() {
-        return city_id;
+    public String getId() {
+        return id;
     }
 
-    public String getPincode() {
-        return pincode;
+    public void setId(String id) {
+        this.id = id;
     }
-
-    @Override
-    public String toString() {
-        return city_name;
-    }
-
-
 }

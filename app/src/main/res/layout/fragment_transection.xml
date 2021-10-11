@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:shimmer="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_color"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    tools:ignore="Overdraw">
 
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -32,7 +34,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:orientation="vertical"
-        shimmer:shimmer_duration="1200">
+        shimmer:shimmer_duration="1200"
+        android:visibility="gone">
 
         <!-- Adding rows of placeholders -->
         <LinearLayout
@@ -66,6 +69,7 @@
         android:visibility="gone">
 
         <TextView
+                android:textAlignment="viewStart"
             android:id="@+id/tvAlertTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -77,6 +81,7 @@
             android:textStyle="bold" />
 
         <TextView
+                android:textAlignment="viewStart"
             android:id="@+id/tvAlertSubTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

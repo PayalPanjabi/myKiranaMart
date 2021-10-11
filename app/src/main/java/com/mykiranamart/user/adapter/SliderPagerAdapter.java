@@ -7,6 +7,8 @@ import androidx.fragment.app.FragmentPagerAdapter;
 
 import com.mykiranamart.user.fragment.SliderItemFragment;
 
+
+@SuppressWarnings({"ALL", "deprecation"})
 public class SliderPagerAdapter extends FragmentPagerAdapter {
     public SliderPagerAdapter(@NonNull FragmentManager fm, int behavior) {
         super(fm, behavior);

@@ -1,6 +1,8 @@
 package com.mykiranamart.user.model;
 
-public class Faq {
+import java.io.Serializable;
+
+public class Faq implements Serializable {
     String id, question, answer, status;
 
     public String getId() {
@@ -15,16 +17,8 @@ public class Faq {
         return question;
     }
 
-    public void setQuestion(String question) {
-        this.question = question;
-    }
-
     public String getAnswer() {
         return answer;
-    }
-
-    public void setAnswer(String answer) {
-        this.answer = answer;
     }
 
     public String getStatus() {

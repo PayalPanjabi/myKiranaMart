@@ -1,5 +1,8 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -10,6 +13,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.RelativeLayout;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -27,15 +31,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.mykiranamart.user.R;
-import com.mykiranamart.user.activity.DrawerActivity;
 import com.mykiranamart.user.adapter.NotificationAdapter;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.model.Notification;
-
-import static android.content.Context.INPUT_METHOD_SERVICE;
 
 
 public class NotificationFragment extends Fragment {
@@ -75,17 +75,14 @@ public class NotificationFragment extends Fragment {
             getNotificationData();
         }
 
-        swipeLayout.setColorSchemeColors(getResources().getColor(R.color.colorPrimary));
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                if (notifications != null) {
-                    notifications = null;
-                }
-                offset = 0;
-                getNotificationData();
-                swipeLayout.setRefreshing(false);
+        swipeLayout.setColorSchemeColors(ContextCompat.getColor(activity,R.color.colorPrimary));
+        swipeLayout.setOnRefreshListener(() -> {
+            if (notifications != null) {
+                notifications = null;
             }
+            offset = 0;
+            getNotificationData();
+            swipeLayout.setRefreshing(false);
         });
 
 
@@ -93,6 +90,7 @@ public class NotificationFragment extends Fragment {
     }
 
 
+    @SuppressLint("NotifyDataSetChanged")
     void getNotificationData() {
         notifications = new ArrayList<>();
         final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(activity);
@@ -103,111 +101,100 @@ public class NotificationFragment extends Fragment {
         params.put(Constant.OFFSET, "" + offset);
         params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT + 10);
 
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            total = Integer.parseInt(objectbject.getString(Constant.TOTAL));
-                            session.setData(Constant.TOTAL, String.valueOf(total));
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        total = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
+                        session.setData(Constant.TOTAL, String.valueOf(total));
 
-                            JSONObject object = new JSONObject(response);
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                        JSONObject object = new JSONObject(response);
+                        JSONArray jsonArray = object.getJSONArray(Constant.DATA);
 
-                            Gson g = new Gson();
+                        Gson g = new Gson();
 
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject jsonObject1 = jsonArray.getJSONObject(i);
 
-                                if (jsonObject1 != null) {
-                                    Notification notification = g.fromJson(jsonObject1.toString(), Notification.class);
-                                    notifications.add(notification);
-                                } else {
-                                    break;
-                                }
-
+                            if (jsonObject1 != null) {
+                                Notification notification = g.fromJson(jsonObject1.toString(), Notification.class);
+                                notifications.add(notification);
+                            } else {
+                                break;
                             }
-                            if (offset == 0) {
-                                notificationAdapter = new NotificationAdapter(activity, notifications);
-                                notificationAdapter.setHasStableIds(true);
-                                recyclerView.setAdapter(notificationAdapter);
-                                scrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
-                                    @Override
-                                    public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
 
-                                        // if (diff == 0) {
-                                        if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
-                                            if (notifications.size() < total) {
-                                                if (!isLoadMore) {
-                                                    if (linearLayoutManager.findLastCompletelyVisibleItemPosition() == notifications.size() - 1) {
-                                                        //bottom of list!
-                                                        notifications.add(null);
-                                                        notificationAdapter.notifyItemInserted(notifications.size() - 1);
-                                                        offset += Constant.LOAD_ITEM_LIMIT + 10;
-                                                        Map<String, String> params = new HashMap<>();
-                                                        params.put(Constant.GET_NOTIFICATIONS, Constant.GetVal);
-                                                        params.put(Constant.OFFSET, "" + offset);
-                                                        params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT + 10);
+                        }
+                        if (offset == 0) {
+                            notificationAdapter = new NotificationAdapter(activity, notifications);
+                            recyclerView.setAdapter(notificationAdapter);
+                            scrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
 
-                                                        ApiConfig.RequestToVolley(new VolleyCallback() {
-                                                            @Override
-                                                            public void onSuccess(boolean result, String response) {
+                                // if (diff == 0) {
+                                if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
+                                    if (notifications.size() < total) {
+                                        if (!isLoadMore) {
+                                            if (linearLayoutManager.findLastCompletelyVisibleItemPosition() == notifications.size() - 1) {
+                                                //bottom of list!
+                                                notifications.add(null);
+                                                notificationAdapter.notifyItemInserted(notifications.size() - 1);
+                                                offset += Constant.LOAD_ITEM_LIMIT + 10;
+                                                Map<String, String> params1 = new HashMap<>();
+                                                params1.put(Constant.GET_NOTIFICATIONS, Constant.GetVal);
+                                                params1.put(Constant.OFFSET, "" + offset);
+                                                params1.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT + 10);
 
-                                                                if (result) {
-                                                                    try {
-                                                                        JSONObject objectbject1 = new JSONObject(response);
-                                                                        if (!objectbject1.getBoolean(Constant.ERROR)) {
+                                                ApiConfig.RequestToVolley((result1, response1) -> {
 
-                                                                            session.setData(Constant.TOTAL, objectbject1.getString(Constant.TOTAL));
+                                                    if (result1) {
+                                                        try {
+                                                            JSONObject jsonObject12 = new JSONObject(response1);
+                                                            if (!jsonObject12.getBoolean(Constant.ERROR)) {
 
-                                                                            notifications.remove(notifications.size() - 1);
-                                                                            notificationAdapter.notifyItemRemoved(notifications.size());
+                                                                session.setData(Constant.TOTAL, jsonObject12.getString(Constant.TOTAL));
 
-                                                                            JSONObject object = new JSONObject(response);
-                                                                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                                                                notifications.remove(notifications.size() - 1);
+                                                                notificationAdapter.notifyItemRemoved(notifications.size());
 
-                                                                            Gson g = new Gson();
+                                                                JSONObject object1 = new JSONObject(response1);
+                                                                JSONArray jsonArray1 = object1.getJSONArray(Constant.DATA);
+
+                                                                Gson g1 = new Gson();
 
 
-                                                                            for (int i = 0; i < jsonArray.length(); i++) {
-                                                                                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                                                                for (int i = 0; i < jsonArray1.length(); i++) {
+                                                                    JSONObject jsonObject1 = jsonArray1.getJSONObject(i);
 
-                                                                                if (jsonObject1 != null) {
-                                                                                    Notification notification = g.fromJson(jsonObject1.toString(), Notification.class);
-                                                                                    notifications.add(notification);
-                                                                                } else {
-                                                                                    break;
-                                                                                }
-                                                                            }
-                                                                            notificationAdapter.notifyDataSetChanged();
-                                                                            notificationAdapter.setLoaded();
-                                                                            isLoadMore = false;
-                                                                        }
-                                                                    } catch (JSONException e) {
-
+                                                                    if (jsonObject1 != null) {
+                                                                        Notification notification = g1.fromJson(jsonObject1.toString(), Notification.class);
+                                                                        notifications.add(notification);
+                                                                    } else {
+                                                                        break;
                                                                     }
                                                                 }
+                                                                notificationAdapter.notifyDataSetChanged();
+                                                                isLoadMore = false;
                                                             }
-                                                        }, activity, Constant.GET_SECTION_URL, params, false);
-
+                                                        } catch (JSONException e) {
+                                                            e.printStackTrace();
+                                                        }
                                                     }
-                                                    isLoadMore = true;
-                                                }
+                                                }, activity, Constant.GET_SECTION_URL, params1, false);
 
                                             }
+                                            isLoadMore = true;
                                         }
-                                    }
-                                });
-                            }
-                        } else {
-                            recyclerView.setVisibility(View.GONE);
-                            tvAlert.setVisibility(View.VISIBLE);
-                        }
-                    } catch (JSONException e) {
 
+                                    }
+                                }
+                            });
+                        }
+                    } else {
+                        recyclerView.setVisibility(View.GONE);
+                        tvAlert.setVisibility(View.VISIBLE);
                     }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         }, activity, Constant.GET_SECTION_URL, params, true);
@@ -218,8 +205,7 @@ public class NotificationFragment extends Fragment {
         super.onResume();
         Constant.TOOLBAR_TITLE = getString(R.string.notifications);
         activity.invalidateOptionsMenu();
-        Session.setCount(Constant.UNREAD_NOTIFICATION_COUNT, 0, getContext());
-        ApiConfig.updateNavItemCounter(DrawerActivity.navigationView, R.id.menu_notifications, Session.getCount(Constant.UNREAD_NOTIFICATION_COUNT, getContext()));
+        Session.setCount(Constant.UNREAD_NOTIFICATION_COUNT, 0, activity);
         hideKeyboard();
     }
 
@@ -229,12 +215,13 @@ public class NotificationFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         menu.findItem(R.id.toolbar_cart).setVisible(false);
         menu.findItem(R.id.toolbar_sort).setVisible(false);
         menu.findItem(R.id.toolbar_search).setVisible(false);

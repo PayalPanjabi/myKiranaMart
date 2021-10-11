@@ -16,11 +16,11 @@ import java.util.ArrayList;
 import com.mykiranamart.user.R;
 
 public class OfferAdapter extends RecyclerView.Adapter<OfferAdapter.ViewHolder> {
-    public final ArrayList<String> offerlist;
+    public final ArrayList<String> offerList;
     final int layout;
 
-    public OfferAdapter(ArrayList<String> offerlist, int layout) {
-        this.offerlist = offerlist;
+    public OfferAdapter(ArrayList<String> offerList, int layout) {
+        this.offerList = offerList;
         this.layout = layout;
     }
 
@@ -32,12 +32,11 @@ public class OfferAdapter extends RecyclerView.Adapter<OfferAdapter.ViewHolder> 
         return new ViewHolder(view);
     }
 
-    @NonNull
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder holder, int position) {
-        if (!offerlist.get(position).equals("")) {
+        if (!offerList.get(position).equals("")) {
             Picasso.get()
-                    .load(offerlist.get(position))
+                    .load(offerList.get(position))
                     .fit()
                     .centerInside()
                     .placeholder(R.drawable.offer_placeholder)
@@ -50,10 +49,10 @@ public class OfferAdapter extends RecyclerView.Adapter<OfferAdapter.ViewHolder> 
 
     @Override
     public int getItemCount() {
-        return offerlist.size();
+        return offerList.size();
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
 
         final ImageView offerImage;
         final CardView lytOfferImage;

@@ -14,6 +14,8 @@ import java.util.regex.Pattern;
 
 import com.mykiranamart.user.R;
 
+
+
 public class CreditCardEditText extends AppCompatEditText {
 
     final int mDefaultDrawableResId = R.drawable.ic_credit_cards; //default credit card image
@@ -46,6 +48,7 @@ public class CreditCardEditText extends AppCompatEditText {
         }
     }
 
+    @SuppressWarnings("deprecation")
     @SuppressLint("UseCompatLoadingForDrawables")
     @Override
     protected void onTextChanged(CharSequence text, int start, int lengthBefore, int lengthAfter) {
@@ -94,7 +97,7 @@ public class CreditCardEditText extends AppCompatEditText {
         int bottom = getHeight() - getPaddingBottom();
         float ratio = (float) mCurrentDrawable.getIntrinsicWidth() / (float) mCurrentDrawable.getIntrinsicHeight();
         //int left = right - mCurrentDrawable.getIntrinsicWidth(); //If images are correct size.
-        int left = (int) (right - ((bottom - top) * ratio)); //scale image depeding on height available.
+        int left = (int) (right - ((bottom - top) * ratio)); //scale image depending on height available.
         mCurrentDrawable.setBounds(left, top, right, bottom);
 
         mCurrentDrawable.draw(canvas);

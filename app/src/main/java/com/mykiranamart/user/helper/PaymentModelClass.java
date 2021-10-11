@@ -36,7 +36,7 @@ public class PaymentModelClass {
     final String TAG = CheckoutFragment.class.getSimpleName();
     public PayUmoneySdkInitializer.PaymentParam mPaymentParams;
     public String status, udf5, udf4, udf3, udf2, udf1, email, firstName, productInfo, amount, txnId, key, addedOn, msg, Product, address;
-    public static Map<String, String> sendparams;
+    public static Map<String, String> sendParams;
     ProgressDialog mProgressDialog;
 
     public PaymentModelClass(Activity activity) {
@@ -46,29 +46,28 @@ public class PaymentModelClass {
     //this method calculate hash from sdk
     public static String hashCal(String type, String hashString) {
         StringBuilder hash = new StringBuilder();
-        MessageDigest messageDigest = null;
+        MessageDigest messageDigest;
         try {
             messageDigest = MessageDigest.getInstance(type);
             messageDigest.update(hashString.getBytes());
-            byte[] mdbytes = messageDigest.digest();
-            for (byte hashByte : mdbytes) {
+            byte[] messageDigestBytes = messageDigest.digest();
+            for (byte hashByte : messageDigestBytes) {
                 hash.append(Integer.toString((hashByte & 0xff) + 0x100, 16).substring(1));
             }
         } catch (NoSuchAlgorithmException e) {
-
-
+            e.printStackTrace();
         }
         return hash.toString();
     }
 
     public static String hashCal1(String str) {
-        byte[] hashseq = str.getBytes();
+        byte[] hashSeq = str.getBytes();
         StringBuilder hexString = new StringBuilder();
 
         try {
             MessageDigest algorithm = MessageDigest.getInstance("SHA-512");
             algorithm.reset();
-            algorithm.update(hashseq);
+            algorithm.update(hashSeq);
             byte[] messageDigest = algorithm.digest();
             for (byte aMessageDigest : messageDigest) {
                 String hex = Integer.toHexString(0xFF & aMessageDigest);
@@ -77,7 +76,8 @@ public class PaymentModelClass {
                 }
                 hexString.append(hex);
             }
-        } catch (NoSuchAlgorithmException ignored) {
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
         }
         return hexString.toString();
     }
@@ -98,10 +98,10 @@ public class PaymentModelClass {
         }
     }
 
-    public void OnPayClick(Activity activity, Map<String, String> sendparams, String OrderType, String amount) {
+    public void OnPayClick(Activity activity, Map<String, String> sendParams, String OrderType, String amount) {
         try {
 
-            PaymentModelClass.sendparams = sendparams;
+            PaymentModelClass.sendParams = sendParams;
 
             PayUmoneyConfig payUmoneyConfig = PayUmoneyConfig.getInstance();
 
@@ -111,9 +111,9 @@ public class PaymentModelClass {
             payUmoneyConfig.setPayUmoneyActivityTitle(activity.getResources().getString(R.string.app_name));
             PayUmoneySdkInitializer.PaymentParam.Builder builder = new PayUmoneySdkInitializer.PaymentParam.Builder();
             String txnId = System.currentTimeMillis() + "";
-            String phone = sendparams.get(Constant.MOBILE);
-            String firstName = sendparams.get(Constant.USER_NAME);
-            String email = sendparams.get(Constant.EMAIL);
+            String phone = sendParams.get(Constant.MOBILE);
+            String firstName = sendParams.get(Constant.USER_NAME);
+            String email = sendParams.get(Constant.EMAIL);
             String udf1 = "";
             String udf2 = "";
             String udf3 = "";
@@ -168,17 +168,17 @@ public class PaymentModelClass {
         StringBuilder stringBuilder = new StringBuilder();
         HashMap<String, String> params = paymentParam.getParams();
         try {
-            stringBuilder.append(params.get(PayUmoneyConstants.KEY) + "|");
-            stringBuilder.append(params.get(PayUmoneyConstants.TXNID) + "|");
-            stringBuilder.append(params.get(PayUmoneyConstants.AMOUNT) + "|");
-            stringBuilder.append(params.get(PayUmoneyConstants.PRODUCT_INFO) + "|");
-            stringBuilder.append(params.get(PayUmoneyConstants.FIRSTNAME) + "|");
-            stringBuilder.append(params.get(PayUmoneyConstants.EMAIL) + "|");
-            stringBuilder.append(params.get(PayUmoneyConstants.UDF1) + "|");
-            stringBuilder.append(params.get(PayUmoneyConstants.UDF2) + "|");
-            stringBuilder.append(params.get(PayUmoneyConstants.UDF3) + "|");
-            stringBuilder.append(params.get(PayUmoneyConstants.UDF4) + "|");
-            stringBuilder.append(params.get(PayUmoneyConstants.UDF5) + "||||||");
+            stringBuilder.append(params.get(PayUmoneyConstants.KEY)).append("|");
+            stringBuilder.append(params.get(PayUmoneyConstants.TXNID)).append("|");
+            stringBuilder.append(params.get(PayUmoneyConstants.AMOUNT)).append("|");
+            stringBuilder.append(params.get(PayUmoneyConstants.PRODUCT_INFO)).append("|");
+            stringBuilder.append(params.get(PayUmoneyConstants.FIRSTNAME)).append("|");
+            stringBuilder.append(params.get(PayUmoneyConstants.EMAIL)).append("|");
+            stringBuilder.append(params.get(PayUmoneyConstants.UDF1)).append("|");
+            stringBuilder.append(params.get(PayUmoneyConstants.UDF2)).append("|");
+            stringBuilder.append(params.get(PayUmoneyConstants.UDF3)).append("|");
+            stringBuilder.append(params.get(PayUmoneyConstants.UDF4)).append("|");
+            stringBuilder.append(params.get(PayUmoneyConstants.UDF5)).append("||||||");
 
             AppEnvironment appEnvironment = ((ApiConfig) activity.getApplication()).getAppEnvironment();
             stringBuilder.append(appEnvironment.salt());
@@ -187,12 +187,12 @@ public class PaymentModelClass {
             paymentParam.setMerchantHash(hash);
 
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
         return paymentParam;
     }
 
-    public void TrasactionMethod(Intent data, Activity activity, String from) {
+    public void TransactionMethod(Intent data, Activity activity, String from) {
         // System.out.println("========transaction  call");
         TransactionResponse transactionResponse = data.getParcelableExtra(PayUmoneyFlowManager.INTENT_EXTRA_TRANSACTION_RESPONSE);
         ResultModel resultModel = data.getParcelableExtra(PayUmoneyFlowManager.ARG_RESULT);
@@ -230,21 +230,21 @@ public class PaymentModelClass {
                 if (hash_from_response.equals(hash)) {
                     if (status.equals(Constant.SUCCESS)) {
                         if (from.equals(Constant.PAYMENT)) {
-                            PlaceOrder(activity, activity.getResources().getString(R.string.onlinepaytype), txnId, true, PaymentModelClass.sendparams, status);
+                            PlaceOrder(activity, activity.getResources().getString(R.string.payu_money), txnId, true, PaymentModelClass.sendParams, status);
                         } else if (from.equals(Constant.WALLET)) {
-                            new WalletTransactionFragment().AddWalletBalance(activity, new Session(activity), WalletTransactionFragment.amount, WalletTransactionFragment.msg, txnId);
+                            new WalletTransactionFragment().AddWalletBalance(activity, new Session(activity), WalletTransactionFragment.amount, WalletTransactionFragment.msg);
                         }
                     } else if (status.equals("failure")) {
-                        PlaceOrder(activity, activity.getResources().getString(R.string.onlinepaytype), txnId, false, PaymentModelClass.sendparams, status);
+                        PlaceOrder(activity, activity.getResources().getString(R.string.payu_money), txnId, false, PaymentModelClass.sendParams, status);
                         Toast.makeText(activity, activity.getString(R.string.transaction_failed_msg), Toast.LENGTH_SHORT).show();
                     } else {
-                        PlaceOrder(activity, activity.getResources().getString(R.string.onlinepaytype), txnId, false, PaymentModelClass.sendparams, status);
+                        PlaceOrder(activity, activity.getResources().getString(R.string.payu_money), txnId, false, PaymentModelClass.sendParams, status);
                         Toast.makeText(activity, activity.getString(R.string.transaction_failed_msg), Toast.LENGTH_SHORT).show();
 
                     }
                 }
             } catch (JSONException e) {
-
+                e.printStackTrace();
             }
 
         } else if (resultModel != null && resultModel.getError() != null) {
@@ -254,74 +254,68 @@ public class PaymentModelClass {
         }
     }
 
-    public void PlaceOrder(final Activity activity, final String paymentType, final String txnid, boolean issuccess, Map<String, String> sendparams, final String status) {
+    public void PlaceOrder(final Activity activity, final String paymentType, final String txnid, boolean isSuccess, Map<String, String> sendParams, final String status) {
         showProgressDialog();
-        if(sendparams == null){
-            sendparams = PaymentModelClass.sendparams;
+        if (sendParams == null) {
+            sendParams = PaymentModelClass.sendParams;
         }
-        if (issuccess) {
-            Map<String, String> finalSendparams = sendparams;
-            ApiConfig.RequestToVolley(new VolleyCallback() {
-                @Override
-                public void onSuccess(boolean result, String response) {
-                    if (result) {
-                        try {
-                            JSONObject object = new JSONObject(response);
-                            if (!object.getBoolean(Constant.ERROR)) {
-                                activity.finish();
-                                AddTransaction(object.getString(Constant.ORDER_ID), paymentType, txnid, status, activity.getResources().getString(R.string.order_success), finalSendparams);
-                                Intent intent = new Intent(activity, MainActivity.class);
-                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                intent.putExtra(Constant.FROM, "payment_success");
-                                activity.startActivity(intent);
-                            } else {
-                                hideProgressDialog();
-                            }
-                        } catch (JSONException e) {
+        if (isSuccess) {
+            Map<String, String> finalSendParams = sendParams;
+            ApiConfig.RequestToVolley((result, response) -> {
+                if (result) {
+                    try {
+                        JSONObject object = new JSONObject(response);
+                        if (!object.getBoolean(Constant.ERROR)) {
+                            AddTransaction(object.getString(Constant.ORDER_ID), paymentType, txnid, status, activity.getResources().getString(R.string.order_success), finalSendParams);
+                            Intent intent = new Intent(activity, MainActivity.class);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            intent.putExtra(Constant.FROM, "payment_success");
+                            activity.startActivity(intent);
+                            activity.finish();
+                        } else {
                             hideProgressDialog();
-
                         }
+                    } catch (JSONException e) {
+                        hideProgressDialog();
+
                     }
                 }
-            }, activity, Constant.ORDERPROCESS_URL, sendparams, false);
+            }, activity, Constant.ORDER_PROCESS_URL, sendParams, false);
         } else {
             hideProgressDialog();
-            AddTransaction("", activity.getResources().getString(R.string.onlinepaytype), txnid, status, "Order Failed", sendparams);
+            AddTransaction("", paymentType, txnid, status, "Order Failed", sendParams);
         }
     }
 
-    public void AddTransaction(String orderId, String paymentType, String txnid, final String status, String message, Map<String, String> sendparams) {
-        Map<String, String> transparams = new HashMap<>();
-        transparams.put(Constant.ADD_TRANSACTION, Constant.GetVal);
-        transparams.put(Constant.USER_ID, sendparams.get(Constant.USER_ID));
-        transparams.put(Constant.ORDER_ID, orderId);
-        transparams.put(Constant.TYPE, paymentType);
-        transparams.put(Constant.TRANS_ID, txnid);
-        transparams.put(Constant.AMOUNT, sendparams.get(Constant.FINAL_TOTAL));
-        transparams.put(Constant.STATUS, status);
-        transparams.put(Constant.MESSAGE, message);
+    public void AddTransaction(String orderId, String paymentType, String txnid, final String status, String message, Map<String, String> sendParams) {
+        Map<String, String> transactionParams = new HashMap<>();
+        transactionParams.put(Constant.ADD_TRANSACTION, Constant.GetVal);
+        transactionParams.put(Constant.USER_ID, sendParams.get(Constant.USER_ID));
+        transactionParams.put(Constant.ORDER_ID, orderId);
+        transactionParams.put(Constant.TYPE, paymentType);
+        transactionParams.put(Constant.TRANS_ID, txnid);
+        transactionParams.put(Constant.AMOUNT, sendParams.get(Constant.FINAL_TOTAL));
+        transactionParams.put(Constant.STATUS, status);
+        transactionParams.put(Constant.MESSAGE, message);
         Date c = Calendar.getInstance().getTime();
         @SuppressLint("SimpleDateFormat") SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-        transparams.put("transaction_date", df.format(c));
-        //System.out.println ("====trans params " + transparams);
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                //System.out.println ("=================*transaction- " + response);
-                if (result) {
-                    try {
-                        hideProgressDialog();
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            
-                            activity.finish();
-                        }
-                    } catch (JSONException e) {
+        transactionParams.put("transaction_date", df.format(c));
+        //System.out.println ("====trans params " + transactionParams);
+        ApiConfig.RequestToVolley((result, response) -> {
+            //System.out.println ("=================*transaction- " + response);
+            if (result) {
+                try {
+                    hideProgressDialog();
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
 
+                        activity.finish();
                     }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
-        }, activity, Constant.ORDERPROCESS_URL, transparams, false);
+        }, activity, Constant.ORDER_PROCESS_URL, transactionParams, false);
     }
 }

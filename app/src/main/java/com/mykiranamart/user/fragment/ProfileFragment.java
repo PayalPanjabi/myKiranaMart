@@ -1,19 +1,18 @@
 package com.mykiranamart.user.fragment;
 
+import static android.app.Activity.RESULT_OK;
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -36,20 +35,12 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
+import com.canhub.cropper.CropImage;
+import com.canhub.cropper.CropImageView;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.squareup.picasso.Picasso;
-import com.theartofdev.edmodo.cropper.CropImage;
-import com.theartofdev.edmodo.cropper.CropImageView;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.mime.content.FileBody;
-import org.apache.http.entity.mime.content.StringBody;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -60,41 +51,31 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import jp.wasabeef.picasso.transformations.RoundedCornersTransformation;
 import com.mykiranamart.user.R;
-import com.mykiranamart.user.activity.DrawerActivity;
-import com.mykiranamart.user.helper.AndroidMultiPartEntity;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
 import com.mykiranamart.user.helper.Utils;
-import com.mykiranamart.user.helper.VolleyCallback;
-import com.mykiranamart.user.ui.CircleTransform;
 
-import static android.app.Activity.RESULT_OK;
-import static android.content.Context.INPUT_METHOD_SERVICE;
-import static com.mykiranamart.user.helper.ApiConfig.createJWT;
+
 
 public class ProfileFragment extends Fragment {
 
     public static final int SELECT_FILE = 110;
     public static final int REQUEST_IMAGE_CAPTURE = 100;
-    public static final int REQUEST_CROP_IMAGE = 120;
     public final int reqWritePermission = 2;
-    final File output = null;
     public ImageView imgProfile;
     public FloatingActionButton fabProfile;
     public ProgressBar progressBar;
     View root;
-    TextView txtchangepassword;
+    TextView tvChangePassword;
     Session session;
-    Button btnsubmit;
+    Button btnSubmit;
     Activity activity;
-    EditText edtname, edtemail, edtMobile, edtoldpsw, edtnewpsw, edtcnewpsw;
-    String currentPhotoPath;
-    Uri fileUri, imageUri;
-    String filePath = null;
-    File sourceFile;
-    long totalSize = 0;
+    EditText edtName, edtEmail, edtMobile, edtOldPassword, edtNewPassword, edtConfirmPassword;
+    String filePath;
+    Uri imageUri;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -103,21 +84,21 @@ public class ProfileFragment extends Fragment {
         root = inflater.inflate(R.layout.fragment_profile, container, false);
         activity = getActivity();
 
-        edtname = root.findViewById(R.id.edtname);
-        edtemail = root.findViewById(R.id.edtemail);
+        edtName = root.findViewById(R.id.edtName);
+        edtEmail = root.findViewById(R.id.edtEmail);
         edtMobile = root.findViewById(R.id.edtMobile);
-        btnsubmit = root.findViewById(R.id.btnsubmit);
-        txtchangepassword = root.findViewById(R.id.txtchangepassword);
+        btnSubmit = root.findViewById(R.id.btnSubmit);
+        tvChangePassword = root.findViewById(R.id.tvChangePassword);
         fabProfile = root.findViewById(R.id.fabProfile);
         progressBar = root.findViewById(R.id.progressBar);
 
-        edtoldpsw = root.findViewById(R.id.edtoldpsw);
-        edtnewpsw = root.findViewById(R.id.edtnewpsw);
-        edtcnewpsw = root.findViewById(R.id.edtcnewpsw);
+        edtOldPassword = root.findViewById(R.id.edtOldPassword);
+        edtNewPassword = root.findViewById(R.id.edtNewPassword);
+        edtConfirmPassword = root.findViewById(R.id.edtConfirmPassword);
 
         setHasOptionsMenu(true);
 
-        session = new Session(getContext());
+        session = new Session(activity);
 
         imgProfile = root.findViewById(R.id.imgProfile);
 
@@ -127,79 +108,63 @@ public class ProfileFragment extends Fragment {
                 .centerInside()
                 .placeholder(R.drawable.ic_profile_placeholder)
                 .error(R.drawable.ic_profile_placeholder)
-                .transform(new CircleTransform())
+                .transform(new RoundedCornersTransformation(20, 0))
                 .into(imgProfile);
 
-        fabProfile.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                SelectProfileImage();
-            }
-        });
+        fabProfile.setOnClickListener(view -> SelectProfileImage());
 
-        txtchangepassword.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                OpenBottomDialog(activity);
-            }
-        });
+        tvChangePassword.setOnClickListener(v -> OpenBottomDialog(activity));
 
-        btnsubmit.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                final String name = edtname.getText().toString();
-                final String email = edtemail.getText().toString();
-                final String mobile = edtMobile.getText().toString();
+        btnSubmit.setOnClickListener(view -> {
+            final String name = edtName.getText().toString();
+            final String email = edtEmail.getText().toString();
+            final String mobile = edtMobile.getText().toString();
 
-                if (ApiConfig.CheckValidattion(name, false, false)) {
-                    edtname.requestFocus();
-                    edtname.setError(getString(R.string.enter_name));
-                } else if (ApiConfig.CheckValidattion(email, false, false)) {
-                    edtemail.requestFocus();
-                    edtemail.setError(getString(R.string.enter_email));
-                } else if (ApiConfig.CheckValidattion(email, true, false)) {
-                    edtemail.requestFocus();
-                    edtemail.setError(getString(R.string.enter_valid_email));
-                } else if (ApiConfig.isConnected(activity)) {
-                    Map<String, String> params = new HashMap<>();
-                    params.put(Constant.TYPE, Constant.EDIT_PROFILE);
-                    params.put(Constant.ID, session.getData(Constant.ID));
-                    params.put(Constant.NAME, name);
-                    params.put(Constant.EMAIL, email);
-                    params.put(Constant.MOBILE, mobile);
-                    params.put(Constant.LONGITUDE, session.getCoordinates(Constant.LONGITUDE));
-                    params.put(Constant.LATITUDE, session.getCoordinates(Constant.LATITUDE));
-                    params.put(Constant.FCM_ID, session.getData(Constant.FCM_ID));
-                    //System.out.println("====update res " + params.toString());
-                    ApiConfig.RequestToVolley(new VolleyCallback() {
-                        @Override
-                        public void onSuccess(boolean result, String response) {
-                            //System.out.println ("=================* " + response);
-                            if (result) {
-                                try {
-                                    JSONObject objectbject = new JSONObject(response);
-                                    if (!objectbject.getBoolean(Constant.ERROR)) {
-                                        session.setData(Constant.NAME, name);
-                                        session.setData(Constant.EMAIL, email);
-                                        session.setData(Constant.MOBILE, mobile);
-                                        DrawerActivity.tvName.setText(name);
+            if (ApiConfig.CheckValidation(name, false, false)) {
+                edtName.requestFocus();
+                edtName.setError(getString(R.string.enter_name));
+            } else if (ApiConfig.CheckValidation(email, false, false)) {
+                edtEmail.requestFocus();
+                edtEmail.setError(getString(R.string.enter_email));
+            } else if (ApiConfig.CheckValidation(email, true, false)) {
+                edtEmail.requestFocus();
+                edtEmail.setError(getString(R.string.enter_valid_email));
+            } else if (ApiConfig.isConnected(activity)) {
+                Map<String, String> params = new HashMap<>();
+                params.put(Constant.TYPE, Constant.EDIT_PROFILE);
+                params.put(Constant.ID, session.getData(Constant.ID));
+                params.put(Constant.NAME, name);
+                params.put(Constant.EMAIL, email);
+                params.put(Constant.MOBILE, mobile);
+                params.put(Constant.LONGITUDE, session.getCoordinates(Constant.LONGITUDE));
+                params.put(Constant.LATITUDE, session.getCoordinates(Constant.LATITUDE));
+                params.put(Constant.FCM_ID, session.getData(Constant.FCM_ID));
+                //System.out.println("====update res " + params.toString());
+                ApiConfig.RequestToVolley((result, response) -> {
+                    //System.out.println ("=================* " + response);
+                    if (result) {
+                        try {
+                            JSONObject jsonObject = new JSONObject(response);
+                            if (!jsonObject.getBoolean(Constant.ERROR)) {
+                                session.setData(Constant.NAME, name);
+                                session.setData(Constant.EMAIL, email);
+                                session.setData(Constant.MOBILE, mobile);
+                                DrawerFragment.tvName.setText(name);
 
-                                    }
-                                    Toast.makeText(activity, objectbject.getString("message"), Toast.LENGTH_SHORT).show();
-                                } catch (JSONException e) {
-
-                                }
                             }
+                            Toast.makeText(activity, jsonObject.getString(Constant.MESSAGE), Toast.LENGTH_SHORT).show();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
                         }
-                    }, activity, Constant.RegisterUrl, params, true);
-                }
-
-
+                    }
+                }, activity, Constant.RegisterUrl, params, true);
             }
+
+
         });
 
-        edtname.setText(session.getData(Constant.NAME));
-        edtemail.setText(session.getData(Constant.EMAIL));
+        edtName.setText(session.getData(Constant.NAME));
+        edtEmail.setText(session.getData(Constant.EMAIL));
         edtMobile.setText(session.getData(Constant.MOBILE));
 
         return root;
@@ -207,68 +172,60 @@ public class ProfileFragment extends Fragment {
 
     public void OpenBottomDialog(final Activity activity) {
         try {
-            View sheetView = activity.getLayoutInflater().inflate(R.layout.dialog_change_password, null);
+            View sheetView = activity.getLayoutInflater().inflate(R.layout.dialog_change_password, (ViewGroup) root, false);
             ViewGroup parentViewGroup = (ViewGroup) sheetView.getParent();
             if (parentViewGroup != null) {
                 parentViewGroup.removeAllViews();
             }
 
-            final BottomSheetDialog mBottomSheetDialog = new BottomSheetDialog(getActivity(), R.style.BottomSheetTheme);
+            final BottomSheetDialog mBottomSheetDialog = new BottomSheetDialog(activity, R.style.BottomSheetTheme);
             mBottomSheetDialog.setContentView(sheetView);
             mBottomSheetDialog.getWindow().setLayout(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             mBottomSheetDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
-            EditText edtoldpsw = sheetView.findViewById(R.id.edtoldpsw);
-            EditText edtnewpsw = sheetView.findViewById(R.id.edtnewpsw);
-            EditText edtcnewpsw = sheetView.findViewById(R.id.edtcnewpsw);
+            EditText edtOldPassword = sheetView.findViewById(R.id.edtOldPassword);
+            EditText edtNewPassword = sheetView.findViewById(R.id.edtNewPassword);
+            EditText edtConfirmPassword = sheetView.findViewById(R.id.edtConfirmPassword);
             ImageView imgChangePasswordClose = sheetView.findViewById(R.id.imgChangePasswordClose);
-            Button btnchangepsw = sheetView.findViewById(R.id.btnchangepsw);
+            Button btnChangePassword = sheetView.findViewById(R.id.btnChangePassword);
 
-            edtoldpsw.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pass, 0, R.drawable.ic_show, 0);
-            edtnewpsw.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pass, 0, R.drawable.ic_show, 0);
-            edtcnewpsw.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pass, 0, R.drawable.ic_show, 0);
+            edtOldPassword.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pass, 0, R.drawable.ic_show, 0);
+            edtNewPassword.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pass, 0, R.drawable.ic_show, 0);
+            edtConfirmPassword.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pass, 0, R.drawable.ic_show, 0);
 
-            Utils.setHideShowPassword(edtoldpsw);
-            Utils.setHideShowPassword(edtnewpsw);
-            Utils.setHideShowPassword(edtcnewpsw);
+            Utils.setHideShowPassword(edtOldPassword);
+            Utils.setHideShowPassword(edtNewPassword);
+            Utils.setHideShowPassword(edtConfirmPassword);
             mBottomSheetDialog.setCancelable(true);
 
 
-            imgChangePasswordClose.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    mBottomSheetDialog.dismiss();
-                }
-            });
+            imgChangePasswordClose.setOnClickListener(v -> mBottomSheetDialog.dismiss());
 
-            btnchangepsw.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    String oldpsw = edtoldpsw.getText().toString();
-                    String password = edtnewpsw.getText().toString();
-                    String cpassword = edtcnewpsw.getText().toString();
+            btnChangePassword.setOnClickListener(view -> {
+                String oldPassword = edtOldPassword.getText().toString();
+                String password = edtNewPassword.getText().toString();
+                String confirmPassword = edtConfirmPassword.getText().toString();
 
-                    if (!password.equals(cpassword)) {
-                        edtcnewpsw.requestFocus();
-                        edtcnewpsw.setError(activity.getString(R.string.pass_not_match));
-                    } else if (ApiConfig.CheckValidattion(oldpsw, false, false)) {
-                        edtoldpsw.requestFocus();
-                        edtoldpsw.setError(activity.getString(R.string.enter_old_pass));
-                    } else if (ApiConfig.CheckValidattion(password, false, false)) {
-                        edtnewpsw.requestFocus();
-                        edtnewpsw.setError(activity.getString(R.string.enter_new_pass));
-                    } else if (!oldpsw.equals(new Session(activity).getData(Constant.PASSWORD))) {
-                        edtoldpsw.requestFocus();
-                        edtoldpsw.setError(activity.getString(R.string.no_match_old_pass));
-                    } else if (ApiConfig.isConnected(activity)) {
-                        ChangePassword(password);
-                    }
+                if (!password.equals(confirmPassword)) {
+                    edtConfirmPassword.requestFocus();
+                    edtConfirmPassword.setError(activity.getString(R.string.pass_not_match));
+                } else if (ApiConfig.CheckValidation(oldPassword, false, false)) {
+                    edtOldPassword.requestFocus();
+                    edtOldPassword.setError(activity.getString(R.string.enter_old_pass));
+                } else if (ApiConfig.CheckValidation(password, false, false)) {
+                    edtNewPassword.requestFocus();
+                    edtNewPassword.setError(activity.getString(R.string.enter_new_pass));
+                } else if (!oldPassword.equals(new Session(activity).getData(Constant.PASSWORD))) {
+                    edtOldPassword.requestFocus();
+                    edtOldPassword.setError(activity.getString(R.string.no_match_old_pass));
+                } else if (ApiConfig.isConnected(activity)) {
+                    ChangePassword(password);
                 }
             });
 
             mBottomSheetDialog.show();
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
@@ -289,24 +246,19 @@ public class ProfileFragment extends Fragment {
 
         // Setting OK Button
         alertDialog.setPositiveButton(getString(R.string.yes), (dialog, which) -> ApiConfig.RequestToVolley((result, response) -> {
-            //  System.out.println("=================*changepsw " + response);
             if (result) {
                 try {
                     JSONObject object = new JSONObject(response);
                     if (!object.getBoolean(Constant.ERROR)) {
                         session.logoutUser(activity);
                     }
-                    Toast.makeText(activity, object.getString("message"), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, object.getString(Constant.MESSAGE), Toast.LENGTH_SHORT).show();
                 } catch (JSONException e) {
-
+                    e.printStackTrace();
                 }
             }
         }, activity, Constant.RegisterUrl, params, true));
-        alertDialog.setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                alertDialog1.dismiss();
-            }
-        });
+        alertDialog.setNegativeButton(getString(R.string.no), (dialog, which) -> alertDialog1.dismiss());
         // Showing Alert Message
         alertDialog.show();
     }
@@ -326,7 +278,7 @@ public class ProfileFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
@@ -338,6 +290,7 @@ public class ProfileFragment extends Fragment {
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.toolbar_logout).setVisible(true);
         menu.findItem(R.id.toolbar_search).setVisible(false);
@@ -346,36 +299,31 @@ public class ProfileFragment extends Fragment {
     }
 
 
+    @SuppressWarnings("deprecation")
     public void SelectProfileImage() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, reqWritePermission);
-            } else if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.CAMERA}, reqWritePermission);
-            } else {
-                selectDialog();
-            }
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, reqWritePermission);
+        } else if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.CAMERA}, reqWritePermission);
         } else {
             selectDialog();
         }
     }
 
+    @SuppressWarnings("deprecation")
     public void selectDialog() {
         final CharSequence[] items = {getString(R.string.from_library), getString(R.string.from_camera), getString(R.string.cancel)};
         androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(activity);
         builder.setTitle("Add Photo!");
-        builder.setItems(items, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int item) {
-                if (items[item].equals(getString(R.string.from_library))) {
-                    Intent intent = new Intent(Intent.ACTION_PICK);
-                    intent.setType("image/*");
-                    startActivityForResult(intent, SELECT_FILE);
-                } else if (items[item].equals(getString(R.string.from_camera))) {
-                    dispatchTakePictureIntent();
-                } else if (items[item].equals(getString(R.string.cancel))) {
-                    dialog.dismiss();
-                }
+        builder.setItems(items, (dialog, item) -> {
+            if (items[item].equals(getString(R.string.from_library))) {
+                Intent intent = new Intent(Intent.ACTION_PICK);
+                intent.setType("image/*");
+                startActivityForResult(intent, SELECT_FILE);
+            } else if (items[item].equals(getString(R.string.from_camera))) {
+                dispatchTakePictureIntent();
+            } else if (items[item].equals(getString(R.string.cancel))) {
+                dialog.dismiss();
             }
         });
         builder.show();
@@ -384,7 +332,7 @@ public class ProfileFragment extends Fragment {
     private File createImageFile() throws IOException {
         // Create an image file name
         @SuppressLint("SimpleDateFormat") String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "TUKUTUKU_" + timeStamp + "_";
+        String imageFileName = "" + timeStamp;
         File storageDir = activity.getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         File image = File.createTempFile(
                 imageFileName,  /* prefix */
@@ -392,10 +340,11 @@ public class ProfileFragment extends Fragment {
                 storageDir      /* directory */
         );
         // Save a file: path for use with ACTION_VIEW intents
-        currentPhotoPath = image.getAbsolutePath();
+        filePath = image.getAbsolutePath();
         return image;
     }
 
+    @SuppressWarnings("deprecation")
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         // Ensure that there's a camera activity to handle the intent
@@ -416,6 +365,7 @@ public class ProfileFragment extends Fragment {
         }
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -437,118 +387,51 @@ public class ProfileFragment extends Fragment {
                         .setOutputCompressFormat(Bitmap.CompressFormat.JPEG)
                         .setAspectRatio(1, 1)
                         .start(activity);
-            } else if (requestCode == REQUEST_CROP_IMAGE) {
-                CropImage.activity(FileProvider.getUriForFile(activity, activity.getPackageName() + ".provider", output)).start(activity);
             } else if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
                 CropImage.ActivityResult result = CropImage.getActivityResult(data);
-                fileUri = result.getUri();
-                new UploadFileToServer().execute();
+                assert result != null;
+                filePath = result.getUriFilePath(activity, true);
+                UpdateProfile(activity);
             }
         }
     }
 
+    public void UpdateProfile(Activity activity) {
+        Map<String, String> params = new HashMap<>();
+        Map<String, String> fileParams = new HashMap<>();
+        params.put(Constant.USER_ID, session.getData(Constant.ID));
+        params.put(Constant.TYPE, Constant.UPLOAD_PROFILE);
+        fileParams.put(Constant.PROFILE, filePath);
 
-    @SuppressLint("StaticFieldLeak")
-    class UploadFileToServer extends AsyncTask<Void, Integer, String> {
-        @Override
-        protected void onPreExecute() {
-            progressBar.setVisibility(View.VISIBLE);
-            super.onPreExecute();
-        }
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        session.setData(Constant.PROFILE, jsonObject.getString(Constant.PROFILE));
+                        Picasso.get()
+                                .load(session.getData(Constant.PROFILE))
+                                .fit()
+                                .centerInside()
+                                .placeholder(R.drawable.placeholder)
+                                .error(R.drawable.placeholder)
+                                .transform(new RoundedCornersTransformation(20, 0))
+                                .into(imgProfile);
 
-        @Override
-        protected String doInBackground(Void... params) {
-            return uploadFile();
-        }
-
-        @SuppressWarnings("deprecation")
-        String uploadFile() {
-            String responseString = null;
-
-            HttpClient httpclient = new DefaultHttpClient();
-            HttpPost httppost = new HttpPost(Constant.RegisterUrl);
-
-            try {
-                AndroidMultiPartEntity entity = new AndroidMultiPartEntity(
-                        new AndroidMultiPartEntity.ProgressListener() {
-                            @Override
-                            public void transferred(long num) {
-
-                            }
-                        });
-
-                filePath = fileUri.getPath();
-                sourceFile = new File(filePath);
-
-//                // Adding file data to http body
-                entity.addPart(Constant.AccessKey, new StringBody(Constant.AccessKeyVal));
-                entity.addPart(Constant.PROFILE, new FileBody(sourceFile));
-                entity.addPart(Constant.USER_ID, new StringBody(session.getData(Constant.ID)));
-                entity.addPart(Constant.TYPE, new StringBody(Constant.UPLOAD_PROFILE));
-
-
-                totalSize = entity.getContentLength();
-                httppost.addHeader(Constant.AUTHORIZATION, "Bearer " + createJWT("eKart", "eKart Authentication"));
-                httppost.setEntity(entity);
-
-                // Making server call
-                HttpResponse response = httpclient.execute(httppost);
-                HttpEntity r_entity = response.getEntity();
-
-                int statusCode = response.getStatusLine().getStatusCode();
-                if (statusCode == 200) {
-                    // Server response
-                    responseString = EntityUtils.toString(r_entity);
-                } else {
-                    responseString = "Error occurred! Http Status Code: " + statusCode;
+                        Picasso.get()
+                                .load(session.getData(Constant.PROFILE))
+                                .fit()
+                                .centerInside()
+                                .placeholder(R.drawable.placeholder)
+                                .error(R.drawable.placeholder)
+                                .transform(new RoundedCornersTransformation(20, 0))
+                                .into(DrawerFragment.imgProfile);
+                    }
+                    Toast.makeText(activity, jsonObject.getString(Constant.MESSAGE), Toast.LENGTH_SHORT).show();
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
-
-            } catch (IOException e) {
-                responseString = e.toString();
             }
-            return responseString;
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inSampleSize = 8;
-
-            try {
-                JSONObject jsonObject = new JSONObject(result);
-                boolean error = jsonObject.getBoolean("error");
-                if (!error) {
-                    session.setData(Constant.PROFILE, jsonObject.getString(Constant.PROFILE));
-
-                    Picasso.get()
-                            .load(session.getData(Constant.PROFILE))
-                            .fit()
-                            .centerInside()
-                            .placeholder(R.drawable.placeholder)
-                            .error(R.drawable.placeholder)
-                            .transform(new CircleTransform())
-                            .into(imgProfile);
-
-                    Picasso.get()
-                            .load(session.getData(Constant.PROFILE))
-                            .fit()
-                            .centerInside()
-                            .placeholder(R.drawable.placeholder)
-                            .error(R.drawable.placeholder)
-                            .transform(new CircleTransform())
-                            .into(DrawerActivity.imgProfile);
-                }
-                Toast.makeText(activity, jsonObject.getString("message"), Toast.LENGTH_SHORT).show();
-
-            } catch (JSONException e) {
-
-            }
-
-            progressBar.setVisibility(View.GONE);
-            super.onPostExecute(result);
-        }
-
+        }, activity, Constant.RegisterUrl, params, fileParams);
     }
-
-
 }

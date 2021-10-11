@@ -3,7 +3,6 @@
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:card_view="http://schemas.android.com/tools"
-    android:id="@+id/loginrlyt"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_gravity="center_horizontal"
@@ -11,6 +10,7 @@
     android:layout_weight="1"
     android:clipChildren="false"
     android:clipToPadding="false"
+    app:cardBackgroundColor="@color/bg_color"
     android:divider="@android:color/transparent"
     android:dividerHeight="0.0px"
     android:elevation="8dp"
@@ -27,9 +27,11 @@
             android:id="@+id/imgError"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_error" />
+            android:src="@drawable/ic_error"
+            android:contentDescription="@string/app_name" />
 
         <TextView
+                android:textAlignment="center"
             android:id="@+id/tvTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -43,6 +45,7 @@
             android:textStyle="bold" />
 
         <TextView
+                android:textAlignment="center"
             android:id="@+id/tvSubtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

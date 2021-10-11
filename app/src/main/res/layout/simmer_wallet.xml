@@ -52,11 +52,13 @@
             android:orientation="vertical">
 
             <TextView
+                android:textAlignment="viewStart"
                 android:layout_width="@dimen/_70sdp"
                 android:layout_height="@dimen/_15ssp"
                 android:background="@color/background" />
 
             <TextView
+                android:textAlignment="viewStart"
                 android:layout_width="@dimen/_70sdp"
                 android:layout_height="@dimen/_15ssp"
                 android:layout_marginTop="@dimen/_2sdp"
@@ -89,6 +91,7 @@
             android:background="@color/background" />
 
         <TextView
+                android:textAlignment="viewStart"
             android:layout_width="match_parent"
             android:layout_height="@dimen/_15sdp"
             android:layout_below="@id/tv1TxMessageTitle"

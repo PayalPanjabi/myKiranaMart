@@ -1,7 +1,11 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+import static com.mykiranamart.user.helper.ApiConfig.GetSettings;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -9,9 +13,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -20,6 +26,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.facebook.shimmer.ShimmerFrameLayout;
+import com.google.gson.Gson;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -35,18 +42,13 @@ import com.mykiranamart.user.adapter.SubCategoryAdapter;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.model.Category;
-import com.mykiranamart.user.model.PriceVariation;
 import com.mykiranamart.user.model.Product;
-
-import static android.content.Context.INPUT_METHOD_SERVICE;
-import static com.mykiranamart.user.helper.ApiConfig.GetSettings;
 
 public class SubCategoryFragment extends Fragment {
     public static ArrayList<Product> productArrayList;
     public static ArrayList<Category> categoryArrayList;
-    public static ProductLoadMoreAdapter mAdapter;
+    public ProductLoadMoreAdapter productLoadMoreAdapter;
     View root;
     Session session;
     int total;
@@ -54,49 +56,39 @@ public class SubCategoryFragment extends Fragment {
     Activity activity;
     int offset = 0;
     String id, filterBy, from;
-    RecyclerView recyclerView, subCategoryrecycleview;
+    RecyclerView recyclerView, subCategoryRecycleView;
     SwipeRefreshLayout swipeLayout;
     int filterIndex;
     boolean isSort = false, isLoadMore = false;
     boolean isGrid = false;
     int resource;
     private ShimmerFrameLayout mShimmerViewContainer;
+    TextView tvAlert;
 
     @Override
     public View onCreateView(final LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         root = inflater.inflate(R.layout.fragment_sub_category, container, false);
+        getAllWidgets(root);
         setHasOptionsMenu(true);
         offset = 0;
         activity = getActivity();
 
         session = new Session(activity);
 
+        assert getArguments() != null;
         from = getArguments().getString(Constant.FROM);
         id = getArguments().getString("id");
 
         if (session.getGrid("grid")) {
             resource = R.layout.lyt_item_grid;
             isGrid = true;
-
-            recyclerView = root.findViewById(R.id.recyclerView);
             recyclerView.setLayoutManager(new GridLayoutManager(activity, 2));
-
         } else {
             resource = R.layout.lyt_item_list;
             isGrid = false;
-
-            recyclerView = root.findViewById(R.id.recyclerView);
             recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         }
-
-        swipeLayout = root.findViewById(R.id.swipeLayout);
-        nestedScrollView = root.findViewById(R.id.nestedScrollView);
-
-        subCategoryrecycleview = root.findViewById(R.id.subCategoryrecycleview);
-        subCategoryrecycleview.setLayoutManager(new GridLayoutManager(getContext(), Constant.GRIDCOLUMN));
-        mShimmerViewContainer = root.findViewById(R.id.mShimmerViewContainer);
-
 
         filterIndex = -1;
 
@@ -115,30 +107,39 @@ public class SubCategoryFragment extends Fragment {
         }
 
         swipeLayout.setColorSchemeResources(R.color.colorPrimary);
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                swipeLayout.setRefreshing(false);
-                if (from.equals("regular")) {
-                    GetData();
-                    isSort = true;
-                } else if (from.equals("category")) {
-                    GetCategory();
-                    GetProducts();
-                }
+        swipeLayout.setOnRefreshListener(() -> {
+            swipeLayout.setRefreshing(false);
+            if (from.equals("regular")) {
+                GetData();
+                isSort = true;
+            } else if (from.equals("category")) {
+                GetCategory();
+                GetProducts();
             }
         });
 
         return root;
     }
 
+
+    public void getAllWidgets(View root) {
+        tvAlert = root.findViewById(R.id.tvNoData);
+        recyclerView = root.findViewById(R.id.recyclerView);
+        swipeLayout = root.findViewById(R.id.swipeLayout);
+        nestedScrollView = root.findViewById(R.id.nestedScrollView);
+        mShimmerViewContainer = root.findViewById(R.id.mShimmerViewContainer);
+        subCategoryRecycleView = root.findViewById(R.id.subCategoryRecycleView);
+        subCategoryRecycleView.setLayoutManager(new GridLayoutManager(activity, Constant.GRID_COLUMN));
+
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
     void GetData() {
         productArrayList = new ArrayList<>();
-        nestedScrollView.setVisibility(View.GONE);
-        mShimmerViewContainer.setVisibility(View.VISIBLE);
-        mShimmerViewContainer.startShimmer();
+        startShimmer();
         Map<String, String> params = new HashMap<>();
         params.put(Constant.SUB_CATEGORY_ID, id);
+        params.put(Constant.GET_ALL_PRODUCTS, Constant.GetVal);
         params.put(Constant.USER_ID, session.getData(Constant.ID));
         params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
         params.put(Constant.OFFSET, "" + offset);
@@ -146,181 +147,139 @@ public class SubCategoryFragment extends Fragment {
             params.put(Constant.SORT, filterBy);
         }
 
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
+        ApiConfig.RequestToVolley((result, response) -> {
 
-                if (result) {
-                    try {
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            total = Integer.parseInt(objectbject.getString(Constant.TOTAL));
-                            JSONObject object = new JSONObject(response);
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                                ArrayList<PriceVariation> priceVariations = new ArrayList<>();
-                                JSONArray pricearray = jsonObject.getJSONArray(Constant.VARIANT);
+            if (result) {
+                try {
+                    JSONObject jsonObject1 = new JSONObject(response);
+                    if (!jsonObject1.getBoolean(Constant.ERROR)) {
+                        tvAlert.setVisibility(View.GONE);
+                        total = Integer.parseInt(jsonObject1.getString(Constant.TOTAL));
+                        JSONObject object = new JSONObject(response);
+                        JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            Product product = new Gson().fromJson(jsonArray.getJSONObject(i).toString(), Product.class);
+                            productArrayList.add(product);
+                        }
 
-                                for (int j = 0; j < pricearray.length(); j++) {
-                                    JSONObject obj = pricearray.getJSONObject(j);
-                                    String discountpercent = "0";
-                                    if (!obj.getString(Constant.DISCOUNTED_PRICE).equals("0")) {
-                                        discountpercent = ApiConfig.GetDiscount(obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE));
-                                    }
-                                    priceVariations.add(new PriceVariation(obj.getString(Constant.CART_ITEM_COUNT), obj.getString(Constant.ID), obj.getString(Constant.PRODUCT_ID), obj.getString(Constant.TYPE), obj.getString(Constant.MEASUREMENT), obj.getString(Constant.MEASUREMENT_UNIT_ID), obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE), obj.getString(Constant.SERVE_FOR), obj.getString(Constant.STOCK), obj.getString(Constant.STOCK_UNIT_ID), obj.getString(Constant.MEASUREMENT_UNIT_NAME), obj.getString(Constant.STOCK_UNIT_NAME), discountpercent));
-                                }
-                                productArrayList.add(new Product(jsonObject.getString(Constant.TAX_PERCENT), jsonObject.getString(Constant.ROW_ORDER), jsonObject.getString(Constant.TILL_STATUS), jsonObject.getString(Constant.CANCELLABLE_STATUS), jsonObject.getString(Constant.MANUFACTURER), jsonObject.getString(Constant.MADE_IN), jsonObject.getString(Constant.RETURN_STATUS), jsonObject.getString(Constant.ID), jsonObject.getString(Constant.NAME), jsonObject.getString(Constant.SLUG), jsonObject.getString(Constant.SUC_CATE_ID), jsonObject.getString(Constant.IMAGE), jsonObject.getJSONArray(Constant.OTHER_IMAGES), jsonObject.getString(Constant.DESCRIPTION), jsonObject.getString(Constant.STATUS), jsonObject.getString(Constant.DATE_ADDED), jsonObject.getBoolean(Constant.IS_FAVORITE), jsonObject.getString(Constant.CATEGORY_ID), priceVariations, jsonObject.getString(Constant.INDICATOR), jsonObject.getString(Constant.ratings), jsonObject.getString(Constant.number_of_ratings)));
-                                nestedScrollView.setVisibility(View.VISIBLE);
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                mShimmerViewContainer.stopShimmer();
-                            }
+                        if (offset == 0) {
+                            productLoadMoreAdapter = new ProductLoadMoreAdapter(activity, productArrayList, resource, from);
+                            recyclerView.setAdapter(productLoadMoreAdapter);
+                            stopShimmer();
 
-                            if (offset == 0) {
-                                mAdapter = new ProductLoadMoreAdapter(activity, productArrayList, resource, from);
-                                mAdapter.setHasStableIds(true);
-                                recyclerView.setAdapter(mAdapter);
-                                nestedScrollView.setVisibility(View.VISIBLE);
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                mShimmerViewContainer.stopShimmer();
+                            nestedScrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
 
-                                nestedScrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
-                                    @Override
-                                    public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                                // if (diff == 0) {
+                                if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
+                                    LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+                                    if (productArrayList.size() < total) {
+                                        if (!isLoadMore) {
+                                            if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == productArrayList.size() - 1) {
+                                                //bottom of list!
+                                                productArrayList.add(null);
+                                                productLoadMoreAdapter.notifyItemInserted(productArrayList.size() - 1);
 
-                                        // if (diff == 0) {
-                                        if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
-                                            LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                                            if (productArrayList.size() < total) {
-                                                if (!isLoadMore) {
-                                                    if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == productArrayList.size() - 1) {
-                                                        //bottom of list!
-                                                        productArrayList.add(null);
-                                                        mAdapter.notifyItemInserted(productArrayList.size() - 1);
-
-                                                        offset += Integer.parseInt("" + Constant.LOAD_ITEM_LIMIT);
-                                                        Map<String, String> params = new HashMap<>();
-                                                        params.put(Constant.SUB_CATEGORY_ID, id);
-                                                        params.put(Constant.USER_ID, session.getData(Constant.ID));
-                                                        params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
-                                                        params.put(Constant.OFFSET, "" + offset);
-                                                        if (filterIndex != -1) {
-                                                            params.put(Constant.SORT, filterBy);
-                                                        }
-
-                                                        ApiConfig.RequestToVolley(new VolleyCallback() {
-                                                            @Override
-                                                            public void onSuccess(boolean result, String response) {
-
-                                                                if (result) {
-                                                                    try {
-                                                                        JSONObject objectbject = new JSONObject(response);
-                                                                        if (!objectbject.getBoolean(Constant.ERROR)) {
-
-                                                                            JSONObject object = new JSONObject(response);
-                                                                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-                                                                            productArrayList.remove(productArrayList.size() - 1);
-                                                                            mAdapter.notifyItemRemoved(productArrayList.size());
-
-                                                                            for (int i = 0; i < jsonArray.length(); i++) {
-                                                                                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                                                                                ArrayList<PriceVariation> priceVariations = new ArrayList<>();
-                                                                                JSONArray pricearray = jsonObject.getJSONArray(Constant.VARIANT);
-
-                                                                                for (int j = 0; j < pricearray.length(); j++) {
-                                                                                    JSONObject obj = pricearray.getJSONObject(j);
-                                                                                    String discountpercent = "0";
-                                                                                    if (!obj.getString(Constant.DISCOUNTED_PRICE).equals("0")) {
-                                                                                        discountpercent = ApiConfig.GetDiscount(obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE));
-                                                                                    }
-                                                                                    priceVariations.add(new PriceVariation(obj.getString(Constant.CART_ITEM_COUNT), obj.getString(Constant.ID), obj.getString(Constant.PRODUCT_ID), obj.getString(Constant.TYPE), obj.getString(Constant.MEASUREMENT), obj.getString(Constant.MEASUREMENT_UNIT_ID), obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE), obj.getString(Constant.SERVE_FOR), obj.getString(Constant.STOCK), obj.getString(Constant.STOCK_UNIT_ID), obj.getString(Constant.MEASUREMENT_UNIT_NAME), obj.getString(Constant.STOCK_UNIT_NAME), discountpercent));
-                                                                                }
-                                                                                productArrayList.add(new Product(jsonObject.getString(Constant.TAX_PERCENT), jsonObject.getString(Constant.ROW_ORDER), jsonObject.getString(Constant.TILL_STATUS), jsonObject.getString(Constant.CANCELLABLE_STATUS), jsonObject.getString(Constant.MANUFACTURER), jsonObject.getString(Constant.MADE_IN), jsonObject.getString(Constant.RETURN_STATUS), jsonObject.getString(Constant.ID), jsonObject.getString(Constant.NAME), jsonObject.getString(Constant.SLUG), jsonObject.getString(Constant.SUC_CATE_ID), jsonObject.getString(Constant.IMAGE), jsonObject.getJSONArray(Constant.OTHER_IMAGES), jsonObject.getString(Constant.DESCRIPTION), jsonObject.getString(Constant.STATUS), jsonObject.getString(Constant.DATE_ADDED), jsonObject.getBoolean(Constant.IS_FAVORITE), jsonObject.getString(Constant.CATEGORY_ID), priceVariations, jsonObject.getString(Constant.INDICATOR), jsonObject.getString(Constant.ratings), jsonObject.getString(Constant.number_of_ratings)));
-                                                                            }
-                                                                            mAdapter.notifyDataSetChanged();
-                                                                            mAdapter.setLoaded();
-                                                                            isLoadMore = false;
-                                                                        }
-                                                                    } catch (Exception e) {
-                                                                        e.printStackTrace();
-                                                                        nestedScrollView.setVisibility(View.VISIBLE);
-                                                                        mShimmerViewContainer.setVisibility(View.GONE);
-                                                                        mShimmerViewContainer.stopShimmer();
-                                                                    }
-                                                                }
-                                                            }
-                                                        }, activity, Constant.GET_PRODUCT_BY_SUB_CATE, params, false);
-                                                        isLoadMore = true;
-                                                    }
+                                                offset += Integer.parseInt("" + Constant.LOAD_ITEM_LIMIT);
+                                                Map<String, String> params1 = new HashMap<>();
+                                                params1.put(Constant.SUB_CATEGORY_ID, id);
+                                                params1.put(Constant.USER_ID, session.getData(Constant.ID));
+                                                params1.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
+                                                params1.put(Constant.OFFSET, "" + offset);
+                                                if (filterIndex != -1) {
+                                                    params1.put(Constant.SORT, filterBy);
                                                 }
+
+                                                ApiConfig.RequestToVolley((result1, response1) -> {
+
+                                                    if (result1) {
+                                                        try {
+                                                            JSONObject jsonObject11 = new JSONObject(response1);
+                                                            productArrayList.remove(productArrayList.size() - 1);
+                                                            productLoadMoreAdapter.notifyItemRemoved(productArrayList.size());
+                                                            if (!jsonObject11.getBoolean(Constant.ERROR)) {
+                                                                JSONObject object1 = new JSONObject(response1);
+                                                                JSONArray jsonArray1 = object1.getJSONArray(Constant.DATA);
+                                                                for (int i = 0; i < jsonArray1.length(); i++) {
+                                                                    Product product = new Gson().fromJson(jsonArray1.getJSONObject(i).toString(), Product.class);
+                                                                    productArrayList.add(product);
+                                                                }
+                                                                productLoadMoreAdapter.notifyDataSetChanged();
+                                                                isLoadMore = false;
+                                                            }
+                                                        } catch (Exception e) {
+                                                            e.printStackTrace();
+                                                            stopShimmer();
+                                                        }
+                                                    }
+                                                }, activity, Constant.GET_PRODUCT_BY_SUB_CATE, params1, false);
+                                                isLoadMore = true;
                                             }
                                         }
                                     }
-                                });
-                            }
-                        } else {
-                            nestedScrollView.setVisibility(View.VISIBLE);
-                            mShimmerViewContainer.setVisibility(View.GONE);
-                            mShimmerViewContainer.stopShimmer();
+                                }
+                            });
                         }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        nestedScrollView.setVisibility(View.VISIBLE);
-                        mShimmerViewContainer.setVisibility(View.GONE);
-                        mShimmerViewContainer.stopShimmer();
+                    } else {
+                        tvAlert.setVisibility(View.GONE);
+                        stopShimmer();
                     }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    stopShimmer();
                 }
             }
-        }, activity, Constant.GET_PRODUCT_BY_SUB_CATE, params, false);
+        }, activity, Constant.GET_ALL_PRODUCTS_URL, params, false);
     }
 
-    void GetCategory() {
+    public void stopShimmer() {
+        nestedScrollView.setVisibility(View.VISIBLE);
+        mShimmerViewContainer.setVisibility(View.GONE);
+        mShimmerViewContainer.stopShimmer();
+    }
+
+    public void startShimmer() {
         nestedScrollView.setVisibility(View.GONE);
         mShimmerViewContainer.setVisibility(View.VISIBLE);
         mShimmerViewContainer.startShimmer();
+    }
+
+    void GetCategory() {
+        startShimmer();
         Map<String, String> params = new HashMap<>();
         params.put(Constant.CATEGORY_ID, id);
 
         categoryArrayList = new ArrayList<>();
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject object = new JSONObject(response);
-                        if (!object.getBoolean(Constant.ERROR)) {
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                                Category category = new Category();
-                                category.setId(jsonObject.getString(Constant.ID));
-                                category.setCategory_id(jsonObject.getString(Constant.CATEGORY_ID));
-                                category.setName(jsonObject.getString(Constant.NAME));
-                                category.setSlug(jsonObject.getString(Constant.SLUG));
-                                category.setSubtitle(jsonObject.getString(Constant.SUBTITLE));
-                                category.setImage(jsonObject.getString(Constant.IMAGE));
-                                categoryArrayList.add(category);
-                            }
-                            subCategoryrecycleview.setAdapter(new SubCategoryAdapter(getContext(), activity, categoryArrayList, R.layout.lyt_subcategory, "sub_cate"));
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject object = new JSONObject(response);
+                    if (!object.getBoolean(Constant.ERROR)) {
+                        JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject jsonObject = jsonArray.getJSONObject(i);
+                            Category category = new Category();
+                            category.setId(jsonObject.getString(Constant.ID));
+                            category.setCategory_id(jsonObject.getString(Constant.CATEGORY_ID));
+                            category.setName(jsonObject.getString(Constant.NAME));
+                            category.setSlug(jsonObject.getString(Constant.SLUG));
+                            category.setSubtitle(jsonObject.getString(Constant.SUBTITLE));
+                            category.setImage(jsonObject.getString(Constant.IMAGE));
+                            categoryArrayList.add(category);
                         }
-                        nestedScrollView.setVisibility(View.VISIBLE);
-                        mShimmerViewContainer.setVisibility(View.GONE);
-                        mShimmerViewContainer.stopShimmer();
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        nestedScrollView.setVisibility(View.VISIBLE);
-                        mShimmerViewContainer.setVisibility(View.GONE);
-                        mShimmerViewContainer.stopShimmer();
+                        subCategoryRecycleView.setAdapter(new SubCategoryAdapter(activity, categoryArrayList, R.layout.lyt_subcategory, "sub_cate"));
                     }
+                    stopShimmer();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    stopShimmer();
                 }
             }
         }, activity, Constant.SubcategoryUrl, params, false);
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     void GetProducts() {
-        nestedScrollView.setVisibility(View.GONE);
-        mShimmerViewContainer.setVisibility(View.VISIBLE);
-        mShimmerViewContainer.startShimmer();
+        startShimmer();
         productArrayList = new ArrayList<>();
         Map<String, String> params = new HashMap<>();
         params.put(Constant.CATEGORY_ID, id);
@@ -331,159 +290,103 @@ public class SubCategoryFragment extends Fragment {
             params.put(Constant.SORT, filterBy);
         }
 
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            isSort = true;
-                            total = Integer.parseInt(objectbject.getString(Constant.TOTAL));
-                            JSONObject object = new JSONObject(response);
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-                            try {
-                                for (int i = 0; i < jsonArray.length(); i++) {
-                                    try {
-                                        JSONObject jsonObject = jsonArray.getJSONObject(i);
-                                        ArrayList<PriceVariation> priceVariations = new ArrayList<>();
-                                        JSONArray pricearray = jsonObject.getJSONArray(Constant.VARIANT);
-
-                                        for (int j = 0; j < pricearray.length(); j++) {
-                                            JSONObject obj = pricearray.getJSONObject(j);
-                                            String discountpercent = "0";
-                                            if (!obj.getString(Constant.DISCOUNTED_PRICE).equals("0")) {
-                                                discountpercent = ApiConfig.GetDiscount(obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE));
-                                            }
-                                            priceVariations.add(new PriceVariation(obj.getString(Constant.CART_ITEM_COUNT), obj.getString(Constant.ID), obj.getString(Constant.PRODUCT_ID), obj.getString(Constant.TYPE), obj.getString(Constant.MEASUREMENT), obj.getString(Constant.MEASUREMENT_UNIT_ID), obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE), obj.getString(Constant.SERVE_FOR), obj.getString(Constant.STOCK), obj.getString(Constant.STOCK_UNIT_ID), obj.getString(Constant.MEASUREMENT_UNIT_NAME), obj.getString(Constant.STOCK_UNIT_NAME), discountpercent));
-                                        }
-                                        productArrayList.add(new Product(jsonObject.getString(Constant.TAX_PERCENT), jsonObject.getString(Constant.ROW_ORDER), jsonObject.getString(Constant.TILL_STATUS), jsonObject.getString(Constant.CANCELLABLE_STATUS), jsonObject.getString(Constant.MANUFACTURER), jsonObject.getString(Constant.MADE_IN), jsonObject.getString(Constant.RETURN_STATUS), jsonObject.getString(Constant.ID), jsonObject.getString(Constant.NAME), jsonObject.getString(Constant.SLUG), jsonObject.getString(Constant.SUC_CATE_ID), jsonObject.getString(Constant.IMAGE), jsonObject.getJSONArray(Constant.OTHER_IMAGES), jsonObject.getString(Constant.DESCRIPTION), jsonObject.getString(Constant.STATUS), jsonObject.getString(Constant.DATE_ADDED), jsonObject.getBoolean(Constant.IS_FAVORITE), jsonObject.getString(Constant.CATEGORY_ID), priceVariations, jsonObject.getString(Constant.INDICATOR), jsonObject.getString(Constant.ratings), jsonObject.getString(Constant.number_of_ratings)));
-                                    } catch (JSONException e) {
-                                        nestedScrollView.setVisibility(View.VISIBLE);
-                                        mShimmerViewContainer.setVisibility(View.GONE);
-                                        mShimmerViewContainer.stopShimmer();
-                                    }
-                                }
-                            } catch (Exception e) {
-                                nestedScrollView.setVisibility(View.VISIBLE);
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                mShimmerViewContainer.stopShimmer();
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject1 = new JSONObject(response);
+                    if (!jsonObject1.getBoolean(Constant.ERROR)) {
+                        isSort = true;
+                        total = Integer.parseInt(jsonObject1.getString(Constant.TOTAL));
+                        JSONObject object = new JSONObject(response);
+                        JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                        try {
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                Product product = new Gson().fromJson(jsonArray.getJSONObject(i).toString(), Product.class);
+                                productArrayList.add(product);
                             }
-                            if (offset == 0) {
-                                mAdapter = new ProductLoadMoreAdapter(activity, productArrayList, resource, from);
-                                mAdapter.setHasStableIds(true);
-                                recyclerView.setAdapter(mAdapter);
-                                nestedScrollView.setVisibility(View.VISIBLE);
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                mShimmerViewContainer.stopShimmer();
-                                nestedScrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
-                                    @Override
-                                    public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-                                        // if (diff == 0) {
-                                        if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
-                                            LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                                            if (productArrayList.size() < total) {
-                                                if (!isLoadMore) {
-                                                    if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == productArrayList.size() - 1) {
-                                                        //bottom of list!
-                                                        productArrayList.add(null);
-                                                        mAdapter.notifyItemInserted(productArrayList.size() - 1);
-
-                                                        offset += Integer.parseInt("" + Constant.LOAD_ITEM_LIMIT);
-                                                        Map<String, String> params = new HashMap<>();
-                                                        params.put(Constant.CATEGORY_ID, id);
-                                                        params.put(Constant.USER_ID, session.getData(Constant.ID));
-                                                        params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
-                                                        params.put(Constant.OFFSET, offset + "");
-                                                        if (filterIndex != -1) {
-                                                            params.put(Constant.SORT, filterBy);
-                                                        }
-
-                                                        ApiConfig.RequestToVolley(new VolleyCallback() {
-                                                            @Override
-                                                            public void onSuccess(boolean result, String response) {
-
-                                                                if (result) {
-                                                                    try {
-                                                                        JSONObject objectbject = new JSONObject(response);
-                                                                        if (!objectbject.getBoolean(Constant.ERROR)) {
-
-                                                                            JSONObject object = new JSONObject(response);
-                                                                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-                                                                            productArrayList.remove(productArrayList.size() - 1);
-                                                                            mAdapter.notifyItemRemoved(productArrayList.size());
-                                                                            try {
-                                                                                for (int i = 0; i < jsonArray.length(); i++) {
-                                                                                    try {
-                                                                                        JSONObject jsonObject = jsonArray.getJSONObject(i);
-                                                                                        ArrayList<PriceVariation> priceVariations = new ArrayList<>();
-                                                                                        JSONArray pricearray = jsonObject.getJSONArray(Constant.VARIANT);
-
-                                                                                        for (int j = 0; j < pricearray.length(); j++) {
-                                                                                            JSONObject obj = pricearray.getJSONObject(j);
-                                                                                            String discountpercent = "0";
-                                                                                            if (!obj.getString(Constant.DISCOUNTED_PRICE).equals("0")) {
-                                                                                                discountpercent = ApiConfig.GetDiscount(obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE));
-                                                                                            }
-                                                                                            priceVariations.add(new PriceVariation(obj.getString(Constant.CART_ITEM_COUNT), obj.getString(Constant.ID), obj.getString(Constant.PRODUCT_ID), obj.getString(Constant.TYPE), obj.getString(Constant.MEASUREMENT), obj.getString(Constant.MEASUREMENT_UNIT_ID), obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE), obj.getString(Constant.SERVE_FOR), obj.getString(Constant.STOCK), obj.getString(Constant.STOCK_UNIT_ID), obj.getString(Constant.MEASUREMENT_UNIT_NAME), obj.getString(Constant.STOCK_UNIT_NAME), discountpercent));
-                                                                                        }
-                                                                                        productArrayList.add(new Product(jsonObject.getString(Constant.TAX_PERCENT), jsonObject.getString(Constant.ROW_ORDER), jsonObject.getString(Constant.TILL_STATUS), jsonObject.getString(Constant.CANCELLABLE_STATUS), jsonObject.getString(Constant.MANUFACTURER), jsonObject.getString(Constant.MADE_IN), jsonObject.getString(Constant.RETURN_STATUS), jsonObject.getString(Constant.ID), jsonObject.getString(Constant.NAME), jsonObject.getString(Constant.SLUG), jsonObject.getString(Constant.SUC_CATE_ID), jsonObject.getString(Constant.IMAGE), jsonObject.getJSONArray(Constant.OTHER_IMAGES), jsonObject.getString(Constant.DESCRIPTION), jsonObject.getString(Constant.STATUS), jsonObject.getString(Constant.DATE_ADDED), jsonObject.getBoolean(Constant.IS_FAVORITE), jsonObject.getString(Constant.CATEGORY_ID), priceVariations, jsonObject.getString(Constant.INDICATOR), jsonObject.getString(Constant.ratings), jsonObject.getString(Constant.number_of_ratings)));
-                                                                                    } catch (JSONException e) {
-                                                                                        nestedScrollView.setVisibility(View.VISIBLE);
-                                                                                        mShimmerViewContainer.setVisibility(View.GONE);
-                                                                                        mShimmerViewContainer.stopShimmer();
-                                                                                    }
-                                                                                }
-                                                                            } catch (Exception e) {
-                                                                                nestedScrollView.setVisibility(View.VISIBLE);
-                                                                                mShimmerViewContainer.setVisibility(View.GONE);
-                                                                                mShimmerViewContainer.stopShimmer();
-                                                                            }
-
-                                                                            mAdapter.notifyDataSetChanged();
-                                                                            mAdapter.setLoaded();
-                                                                            isLoadMore = false;
-                                                                        }
-                                                                    } catch (JSONException e) {
-                                                                        nestedScrollView.setVisibility(View.VISIBLE);
-                                                                        mShimmerViewContainer.setVisibility(View.GONE);
-                                                                        mShimmerViewContainer.stopShimmer();
-                                                                    }
-                                                                }
-                                                            }
-                                                        }, activity, Constant.GET_PRODUCT_BY_CATE, params, false);
-                                                        isLoadMore = true;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                        } else {
-                            activity.invalidateOptionsMenu();
+                        } catch (Exception e) {
+                            stopShimmer();
+                        }
+                        if (offset == 0) {
+                            productLoadMoreAdapter = new ProductLoadMoreAdapter(activity, productArrayList, resource, from);
+                            recyclerView.setAdapter(productLoadMoreAdapter);
                             nestedScrollView.setVisibility(View.VISIBLE);
                             mShimmerViewContainer.setVisibility(View.GONE);
                             mShimmerViewContainer.stopShimmer();
+                            nestedScrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+                                // if (diff == 0) {
+                                if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
+                                    LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+                                    if (productArrayList.size() < total) {
+                                        if (!isLoadMore) {
+                                            if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == productArrayList.size() - 1) {
+                                                //bottom of list!
+                                                productArrayList.add(null);
+                                                productLoadMoreAdapter.notifyItemInserted(productArrayList.size() - 1);
+
+                                                offset += Integer.parseInt("" + Constant.LOAD_ITEM_LIMIT);
+                                                Map<String, String> params1 = new HashMap<>();
+                                                params1.put(Constant.CATEGORY_ID, id);
+                                                params1.put(Constant.USER_ID, session.getData(Constant.ID));
+                                                params1.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
+                                                params1.put(Constant.OFFSET, offset + "");
+                                                if (filterIndex != -1) {
+                                                    params1.put(Constant.SORT, filterBy);
+                                                }
+                                                ApiConfig.RequestToVolley((result1, response1) -> {
+                                                    if (result1) {
+                                                        try {
+                                                            productArrayList.remove(productArrayList.size() - 1);
+                                                            productLoadMoreAdapter.notifyItemRemoved(productArrayList.size());
+                                                            JSONObject jsonObject11 = new JSONObject(response1);
+                                                            if (!jsonObject11.getBoolean(Constant.ERROR)) {
+                                                                JSONObject object1 = new JSONObject(response1);
+                                                                JSONArray jsonArray1 = object1.getJSONArray(Constant.DATA);
+                                                                try {
+                                                                    for (int i = 0; i < jsonArray1.length(); i++) {
+                                                                        Product product = new Gson().fromJson(jsonArray1.getJSONObject(i).toString(), Product.class);
+                                                                        productArrayList.add(product);
+                                                                    }
+                                                                } catch (Exception e) {
+                                                                    nestedScrollView.setVisibility(View.VISIBLE);
+                                                                    mShimmerViewContainer.setVisibility(View.GONE);
+                                                                    mShimmerViewContainer.stopShimmer();
+                                                                }
+
+                                                                productLoadMoreAdapter.notifyDataSetChanged();
+                                                                isLoadMore = false;
+                                                            }
+                                                        } catch (JSONException e) {
+                                                            e.printStackTrace();
+                                                        }
+                                                    }
+                                                }, activity, Constant.GET_PRODUCT_BY_CATE, params1, false);
+                                                isLoadMore = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            });
                         }
-                    } catch (JSONException e) {
-                        nestedScrollView.setVisibility(View.VISIBLE);
-                        mShimmerViewContainer.setVisibility(View.GONE);
-                        mShimmerViewContainer.stopShimmer();
+                    } else {
+                        activity.invalidateOptionsMenu();
+                        stopShimmer();
                     }
+                } catch (JSONException e) {
+                    stopShimmer();
                 }
             }
         }, activity, Constant.GET_PRODUCT_BY_CATE, params, false);
     }
 
-    @SuppressLint("UseCompatLoadingForDrawables")
+    @SuppressLint({"UseCompatLoadingForDrawables", "NotifyDataSetChanged"})
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (isSort) {
             if (item.getItemId() == R.id.toolbar_sort) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-                builder.setTitle(activity.getResources().getString(R.string.filterby));
-                builder.setSingleChoiceItems(Constant.filtervalues, filterIndex, (dialog, item1) -> {
+                builder.setTitle(activity.getResources().getString(R.string.filter_by));
+                builder.setSingleChoiceItems(Constant.filterValues, filterIndex, (dialog, item1) -> {
                     filterIndex = item1;
                     switch (item1) {
                         case 0:
@@ -510,6 +413,25 @@ public class SubCategoryFragment extends Fragment {
                 });
                 AlertDialog alertDialog = builder.create();
                 alertDialog.show();
+            } else if (item.getItemId() == R.id.toolbar_layout) {
+                if (isGrid) {
+
+                    isGrid = false;
+                    recyclerView.setAdapter(null);
+                    resource = R.layout.lyt_item_list;
+                    recyclerView.setLayoutManager(new LinearLayoutManager(activity));
+                } else {
+
+                    isGrid = true;
+                    recyclerView.setAdapter(null);
+                    resource = R.layout.lyt_item_grid;
+                    recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
+                }
+                session.setGrid("grid", isGrid);
+                productLoadMoreAdapter = new ProductLoadMoreAdapter(activity, productArrayList, resource, from);
+                recyclerView.setAdapter(productLoadMoreAdapter);
+                productLoadMoreAdapter.notifyDataSetChanged();
+                activity.invalidateOptionsMenu();
             }
         }
 
@@ -519,18 +441,29 @@ public class SubCategoryFragment extends Fragment {
     @SuppressLint("UseCompatLoadingForDrawables")
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
-        super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.toolbar_sort).setVisible(isSort);
         menu.findItem(R.id.toolbar_search).setVisible(true);
         menu.findItem(R.id.toolbar_cart).setIcon(ApiConfig.buildCounterDrawable(Constant.TOTAL_CART_ITEM, activity));
 
+        menu.findItem(R.id.toolbar_layout).setVisible(true);
 
+        Drawable myDrawable;
+        if (isGrid) {
+
+            myDrawable = ContextCompat.getDrawable(activity, R.drawable.ic_list_);   // The ID of your drawable
+        } else {
+            myDrawable = ContextCompat.getDrawable(activity, R.drawable.ic_grid_);    // The ID of your drawable.
+        }
+        menu.findItem(R.id.toolbar_layout).setIcon(myDrawable);
+
+        super.onPrepareOptionsMenu(menu);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        Constant.TOOLBAR_TITLE = getArguments().getString("name");
+        assert getArguments() != null;
+        Constant.TOOLBAR_TITLE = getArguments().getString(Constant.NAME);
         activity.invalidateOptionsMenu();
         hideKeyboard();
     }
@@ -541,7 +474,7 @@ public class SubCategoryFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 

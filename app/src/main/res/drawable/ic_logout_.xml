@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/bg_menu" />
+
     <item
-        android:width="@dimen/_24sdp"
-        android:height="@dimen/_24sdp"
-        android:drawable="@drawable/bg_menu" />
-    <item
-        android:width="@dimen/_20sdp"
-        android:height="@dimen/_20sdp"
+        android:bottom="@dimen/_2sdp"
         android:drawable="@drawable/ic_logout"
-        android:start="3dp"
-        android:top="3dp" />
+        android:left="@dimen/_2sdp"
+        android:right="@dimen/_2sdp"
+        android:top="@dimen/_2sdp" />
 </layer-list>

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -12,13 +11,13 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.cardview.widget.CardView;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import co.paystack.android.Paystack;
 import co.paystack.android.PaystackSdk;
@@ -31,9 +30,10 @@ import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.PaymentModelClass;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.ui.CreditCardEditText;
 
+
+@SuppressWarnings("unchecked")
 public class PayStackActivity extends AppCompatActivity {
     public String email, cardNumber, cvv;
     public int expiryMonth, expiryYear;
@@ -53,7 +53,7 @@ public class PayStackActivity extends AppCompatActivity {
     private EditText expiryMonthField;
     private EditText expiryYearField;
     private EditText cvvField;
-    CardView cardViewHamburger;
+
     TextView toolbarTitle;
     ImageView imageMenu;
 
@@ -61,36 +61,62 @@ public class PayStackActivity extends AppCompatActivity {
         PaystackSdk.setPublicKey(publicKey);
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //init paystack sdk
+        //init payStack sdk
         PaystackSdk.initialize(getApplicationContext());
         setContentView(R.layout.activity_pay_stack);
         getAllWidgets();
-        setPaystackKey(Constant.PAYSTACK_KEY);
+        setPaystackKey(Constant.PAY_STACK_KEY);
         activity = PayStackActivity.this;
         session = new Session(activity);
 
         paymentModelClass = new PaymentModelClass(activity);
         sendParams = (Map<String, String>) getIntent().getSerializableExtra("params");
-        payableAmount = Double.parseDouble(sendParams.get(Constant.FINAL_TOTAL));
+        payableAmount = Double.parseDouble(Objects.requireNonNull(sendParams.get(Constant.FINAL_TOTAL)));
         from = sendParams.get(Constant.FROM);
 
 
-        getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(false);
         toolbarTitle.setText(getString(R.string.paystack));
 
-        imageMenu.setImageDrawable(getResources().getDrawable(R.drawable.ic_arrow_back));
-        cardViewHamburger.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                onBackPressed();
-            }
-        });
+        imageMenu.setImageResource(R.drawable.ic_arrow_back);
+        imageMenu.setOnClickListener(view -> onBackPressed());
 
         emailField.setText(session.getData(Constant.EMAIL));
         tvPayable.setText(session.getData(Constant.currency) + payableAmount);
+
+        findViewById(R.id.btnPay).setOnClickListener(v -> {
+            if (!validateForm()) {
+                return;
+            }
+            //noinspection CommentedOutCode
+            try {
+                email = emailField.getText().toString().trim();
+                cardNumber = Objects.requireNonNull(cardNumberField.getText()).toString().trim();
+                expiryMonth = Integer.parseInt(expiryMonthField.getText().toString().trim());
+                expiryYear = Integer.parseInt(expiryYearField.getText().toString().trim());
+                cvv = cvvField.getText().toString().trim();
+
+            /*String cardNumber = "4084 0840 8408 4081";
+            int expiryMonth = 11; //any month in the future
+            int expiryYear = 18; // any year in the future
+            String cvv = "408";*/
+                card = new Card(cardNumber, expiryMonth, expiryYear, cvv);
+
+                paymentModelClass.showProgressDialog();
+                if (card.isValid()) {
+                    performCharge();
+                } else {
+                    paymentModelClass.hideProgressDialog();
+                    Toast.makeText(PayStackActivity.this, "Card is not Valid", Toast.LENGTH_LONG).show();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     public void getAllWidgets() {
@@ -103,7 +129,7 @@ public class PayStackActivity extends AppCompatActivity {
         expiryYearField = findViewById(R.id.edit_expiry_year);
         cvvField = findViewById(R.id.edit_cvv);
 
-        cardViewHamburger = findViewById(R.id.cardViewHamburger);
+        imageMenu = findViewById(R.id.imageMenu);
         toolbarTitle = findViewById(R.id.toolbarTitle);
         imageMenu = findViewById(R.id.imageMenu);
     }
@@ -112,7 +138,7 @@ public class PayStackActivity extends AppCompatActivity {
      * Method to perform the charging of the card
      */
     private void performCharge() {
-        //create a Charge object
+        //create a  Charge object
         String[] amount = String.valueOf(payableAmount * 100).split("\\.");
         charge = new Charge();
         charge.setCard(card); //set the card to charge
@@ -127,14 +153,12 @@ public class PayStackActivity extends AppCompatActivity {
 
             @Override
             public void beforeValidate(Transaction transaction) {
-                // This is called only before requesting OTP.
-                // Save reference so you may send to server. If
-                // error occurs with OTP, you should still verify on server.
+                System.out.println(">>>>>> transaction : "+transaction);
             }
 
             @Override
             public void onError(Throwable error, Transaction transaction) {
-                //handle error here
+                System.out.println(">>>>>> error : "+error.getMessage());
             }
         });
     }
@@ -150,7 +174,7 @@ public class PayStackActivity extends AppCompatActivity {
             emailField.setError(null);
         }
 
-        String cardNumber = cardNumberField.getText().toString();
+        String cardNumber = Objects.requireNonNull(cardNumberField.getText()).toString();
         if (TextUtils.isEmpty(cardNumber)) {
             cardNumberField.setError("Required.");
             valid = false;
@@ -186,59 +210,27 @@ public class PayStackActivity extends AppCompatActivity {
         return valid;
     }
 
-    public void PayButton(View view) {
-        if (!validateForm()) {
-            return;
-        }
-        try {
-            email = emailField.getText().toString().trim();
-            cardNumber = cardNumberField.getText().toString().trim();
-            expiryMonth = Integer.parseInt(expiryMonthField.getText().toString().trim());
-            expiryYear = Integer.parseInt(expiryYearField.getText().toString().trim());
-            cvv = cvvField.getText().toString().trim();
-
-            //String cardNumber = "4084 0840 8408 4081";
-            //int expiryMonth = 11; //any month in the future
-            //int expiryYear = 18; // any year in the future
-            //String cvv = "408";
-            card = new Card(cardNumber, expiryMonth, expiryYear, cvv);
-
-            paymentModelClass.showProgressDialog();
-            if (card.isValid()) {
-                performCharge();
-            } else {
-                paymentModelClass.hideProgressDialog();
-                Toast.makeText(PayStackActivity.this, "Card is not Valid", Toast.LENGTH_LONG).show();
-            }
-        } catch (Exception e) {
-
-        }
-    }
 
     public void verifyReference(String amount, String reference, String email) {
         Map<String, String> params = new HashMap<>();
-        params.put(Constant.VERIFY_PAYSTACK, Constant.GetVal);
+        params.put(Constant.VERIFY_PAY_STACK, Constant.GetVal);
         params.put(Constant.AMOUNT, amount);
         params.put(Constant.REFERENCE, reference);
         params.put(Constant.EMAIL, email);
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
 
-                        JSONObject jsonObject = new JSONObject(response);
-                        String status = jsonObject.getString(Constant.STATUS);
-                        if (from.equals(Constant.WALLET)) {
-                            onBackPressed();
-                            new WalletTransactionFragment().AddWalletBalance(activity, new Session(activity), WalletTransactionFragment.amount, WalletTransactionFragment.msg, reference);
-                        } else if (from.equals(Constant.PAYMENT)) {
-                            paymentModelClass.PlaceOrder(activity, getString(R.string.paystack), reference, status.equalsIgnoreCase("success"), sendParams, status);
-                        }
-                    } catch (JSONException e) {
-
+                    JSONObject jsonObject = new JSONObject(response);
+                    String status = jsonObject.getString(Constant.STATUS);
+                    if (from.equals(Constant.WALLET)) {
+                        onBackPressed();
+                        new WalletTransactionFragment().AddWalletBalance(activity, new Session(activity), WalletTransactionFragment.amount, WalletTransactionFragment.msg);
+                    } else if (from.equals(Constant.PAYMENT)) {
+                        paymentModelClass.PlaceOrder(activity, getString(R.string.paystack), reference, status.equalsIgnoreCase("success"), sendParams, status);
                     }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         }, activity, Constant.VERIFY_PAYMENT_REQUEST, params, false);

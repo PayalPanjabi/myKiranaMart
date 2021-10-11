@@ -1,6 +1,7 @@
 package com.mykiranamart.user.helper;
 
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -43,7 +44,7 @@ public class MyNotificationManager {
 
     public void showBigNotification(String title, String message, String url, Intent intent) {
 
-        PendingIntent resultPendingIntent = PendingIntent.getActivity(mCtx, ID_BIG_NOTIFICATION, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        @SuppressLint("UnspecifiedImmutableFlag") PendingIntent resultPendingIntent = PendingIntent.getActivity(mCtx, ID_BIG_NOTIFICATION, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.BigPictureStyle bigPictureStyle = new NotificationCompat.BigPictureStyle();
         bigPictureStyle.setBigContentTitle(Html.fromHtml(title).toString());
         bigPictureStyle.setSummaryText(Html.fromHtml(message).toString());
@@ -76,7 +77,7 @@ public class MyNotificationManager {
     }
 
     public void showSmallNotification(String title, String message, Intent intent) {
-        PendingIntent resultPendingIntent = PendingIntent.getActivity(mCtx, ID_SMALL_NOTIFICATION, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        @SuppressLint("UnspecifiedImmutableFlag") PendingIntent resultPendingIntent = PendingIntent.getActivity(mCtx, ID_SMALL_NOTIFICATION, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
 
         //NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(mCtx);

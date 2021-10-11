@@ -1,5 +1,8 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -8,6 +11,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
 
+import androidx.core.content.ContextCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -28,15 +32,11 @@ import com.mykiranamart.user.adapter.TrackerAdapter;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.model.OrderTracker;
-
-import static android.content.Context.INPUT_METHOD_SERVICE;
-
 
 public class OrderListAllFragment extends Fragment {
     RecyclerView recyclerView;
-    TextView nodata;
+    TextView tvNoData;
     Session session;
     Activity activity;
     View root;
@@ -57,18 +57,15 @@ public class OrderListAllFragment extends Fragment {
         recyclerView = root.findViewById(R.id.recyclerView);
         scrollView = root.findViewById(R.id.scrollView);
         mShimmerViewContainer = root.findViewById(R.id.mShimmerViewContainer);
-        nodata = root.findViewById(R.id.nodata);
+        tvNoData = root.findViewById(R.id.tvNoData);
         setHasOptionsMenu(true);
 
         swipeLayout = root.findViewById(R.id.swipeLayout);
-        swipeLayout.setColorSchemeColors(getResources().getColor(R.color.colorPrimary));
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                offset = 0;
-                swipeLayout.setRefreshing(false);
-                getAllOrders();
-            }
+        swipeLayout.setColorSchemeColors(ContextCompat.getColor(activity,R.color.colorPrimary));
+        swipeLayout.setOnRefreshListener(() -> {
+            offset = 0;
+            swipeLayout.setRefreshing(false);
+            getAllOrders();
         });
 
         getAllOrders();
@@ -89,65 +86,61 @@ public class OrderListAllFragment extends Fragment {
         params.put(Constant.USER_ID, session.getData(Constant.ID));
         params.put(Constant.OFFSET, "" + offset);
         params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            total = Integer.parseInt(objectbject.getString(Constant.TOTAL));
-                            session.setData(Constant.TOTAL, String.valueOf(total));
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        total = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
+                        session.setData(Constant.TOTAL, String.valueOf(total));
 
-                            JSONObject object = new JSONObject(response);
-                            orderTrackerArrayList.addAll(ApiConfig.GetOrders(object.getJSONArray(Constant.DATA)));
-                            if (offset == 0) {
-                                trackerAdapter = new TrackerAdapter(getContext(), activity, orderTrackerArrayList);
-                                recyclerView.setAdapter(trackerAdapter);
-                                mShimmerViewContainer.stopShimmer();
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                recyclerView.setVisibility(View.VISIBLE);
-                                scrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
-                                    private boolean isLoadMore;
+                        JSONObject object = new JSONObject(response);
+                        orderTrackerArrayList.addAll(ApiConfig.GetOrders(object.getJSONArray(Constant.DATA)));
+                        if (offset == 0) {
+                            trackerAdapter = new TrackerAdapter(activity, activity, orderTrackerArrayList);
+                            recyclerView.setAdapter(trackerAdapter);
+                            mShimmerViewContainer.stopShimmer();
+                            mShimmerViewContainer.setVisibility(View.GONE);
+                            recyclerView.setVisibility(View.VISIBLE);
+                            scrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
+                                private boolean isLoadMore;
 
-                                    @Override
-                                    public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                                @SuppressLint("NotifyDataSetChanged")
+                                @Override
+                                public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
 
-                                        // if (diff == 0) {
-                                        if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
-                                            LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                                            if (orderTrackerArrayList.size() < total) {
-                                                if (!isLoadMore) {
-                                                    if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == orderTrackerArrayList.size() - 1) {
-                                                        //bottom of list!
-                                                        orderTrackerArrayList.add(null);
-                                                        trackerAdapter.notifyItemInserted(orderTrackerArrayList.size() - 1);
+                                    // if (diff == 0) {
+                                    if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
+                                        LinearLayoutManager linearLayoutManager1 = (LinearLayoutManager) recyclerView.getLayoutManager();
+                                        if (orderTrackerArrayList.size() < total) {
+                                            if (!isLoadMore) {
+                                                if (linearLayoutManager1 != null && linearLayoutManager1.findLastCompletelyVisibleItemPosition() == orderTrackerArrayList.size() - 1) {
+                                                    //bottom of list!
+                                                    orderTrackerArrayList.add(null);
+                                                    trackerAdapter.notifyItemInserted(orderTrackerArrayList.size() - 1);
 
-                                                        offset += Constant.LOAD_ITEM_LIMIT;
-                                                        Map<String, String> params = new HashMap<>();
-                                                        params.put(Constant.GET_ORDERS, Constant.GetVal);
-                                                        params.put(Constant.USER_ID, session.getData(Constant.ID));
-                                                        params.put(Constant.OFFSET, "" + offset);
-                                                        params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
+                                                    offset += Constant.LOAD_ITEM_LIMIT;
+                                                    Map<String, String> params1 = new HashMap<>();
+                                                    params1.put(Constant.GET_ORDERS, Constant.GetVal);
+                                                    params1.put(Constant.USER_ID, session.getData(Constant.ID));
+                                                    params1.put(Constant.OFFSET, "" + offset);
+                                                    params1.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
 
-                                                        ApiConfig.RequestToVolley(new VolleyCallback() {
-                                                            @Override
-                                                            public void onSuccess(boolean result, String response) {
+                                                    ApiConfig.RequestToVolley((result1, response1) -> {
 
-                                                                if (result) {
+                                                                if (result1) {
                                                                     try {
                                                                         // System.out.println("====product  " + response);
-                                                                        JSONObject objectbject1 = new JSONObject(response);
-                                                                        if (!objectbject1.getBoolean(Constant.ERROR)) {
+                                                                        JSONObject jsonObject1 = new JSONObject(response1);
+                                                                        if (!jsonObject1.getBoolean(Constant.ERROR)) {
 
-                                                                            session.setData(Constant.TOTAL, objectbject1.getString(Constant.TOTAL));
+                                                                            session.setData(Constant.TOTAL, jsonObject1.getString(Constant.TOTAL));
 
                                                                             orderTrackerArrayList.remove(orderTrackerArrayList.size() - 1);
                                                                             trackerAdapter.notifyItemRemoved(orderTrackerArrayList.size());
-                                                                            JSONObject object = new JSONObject(response);
-                                                                            orderTrackerArrayList.addAll(ApiConfig.GetOrders(object.getJSONArray(Constant.DATA)));
+                                                                            JSONObject object1 = new JSONObject(response1);
+                                                                            orderTrackerArrayList.addAll(ApiConfig.GetOrders(object1.getJSONArray(Constant.DATA)));
                                                                             trackerAdapter.notifyDataSetChanged();
-                                                                            trackerAdapter.setLoaded();
                                                                             isLoadMore = false;
                                                                         }
                                                                     } catch (JSONException e) {
@@ -156,34 +149,36 @@ public class OrderListAllFragment extends Fragment {
                                                                         recyclerView.setVisibility(View.VISIBLE);
                                                                     }
                                                                 }
-                                                            }
-                                                        }, activity, Constant.ORDERPROCESS_URL, params, false);
+                                                            },
+                                                            activity,
+                                                            Constant.ORDER_PROCESS_URL,
+                                                            params1,
+                                                            false);
 
-                                                    }
-                                                    isLoadMore = true;
                                                 }
+                                                isLoadMore = true;
                                             }
                                         }
                                     }
-                                });
-                            }
-                        } else {
-                            recyclerView.setVisibility(View.GONE);
-                            nodata.setVisibility(View.VISIBLE);
-                            mShimmerViewContainer.stopShimmer();
-                            mShimmerViewContainer.setVisibility(View.GONE);
-                            recyclerView.setVisibility(View.VISIBLE);
-
+                                }
+                            });
                         }
-                    } catch (JSONException e) {
+                    } else {
+                        recyclerView.setVisibility(View.GONE);
+                        tvNoData.setVisibility(View.VISIBLE);
                         mShimmerViewContainer.stopShimmer();
                         mShimmerViewContainer.setVisibility(View.GONE);
                         recyclerView.setVisibility(View.VISIBLE);
-                    }
 
+                    }
+                } catch (JSONException e) {
+                    mShimmerViewContainer.stopShimmer();
+                    mShimmerViewContainer.setVisibility(View.GONE);
+                    recyclerView.setVisibility(View.VISIBLE);
                 }
+
             }
-        }, activity, Constant.ORDERPROCESS_URL, params, false);
+        }, activity, Constant.ORDER_PROCESS_URL, params, false);
     }
 
 
@@ -195,11 +190,11 @@ public class OrderListAllFragment extends Fragment {
 
     public void hideKeyboard() {
         try {
-            InputMethodManager inputMethodManager = (InputMethodManager) getActivity().getSystemService(INPUT_METHOD_SERVICE);
+            InputMethodManager inputMethodManager = (InputMethodManager) activity.getSystemService(INPUT_METHOD_SERVICE);
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 }

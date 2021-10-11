@@ -1,5 +1,7 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -27,9 +29,6 @@ import com.mykiranamart.user.activity.MainActivity;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
-
-import static android.content.Context.INPUT_METHOD_SERVICE;
 
 public class OrderPlacedFragment extends Fragment {
     View root;
@@ -61,44 +60,47 @@ public class OrderPlacedFragment extends Fragment {
         params.put(Constant.REMOVE_FROM_CART, Constant.GetVal);
         params.put(Constant.USER_ID, session.getData(Constant.ID));
 
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject jsonObject = new JSONObject(response);
-                        if (!jsonObject.getBoolean(Constant.ERROR)) {
-                            ApiConfig.getCartItemCount(activity, session);
-                            Constant.CartValues.clear();
-                            progressBar.setVisibility(View.GONE);
-                            lottieAnimationView.playAnimation();
-
-                            btnSummary.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View view) {
-                                    MainActivity.homeClicked = false;
-                                    MainActivity.categoryClicked = false;
-                                    MainActivity.favoriteClicked = false;
-                                    MainActivity.trackingClicked = false;
-                                    MainActivity.active = null;
-                                    startActivity(new Intent(activity, MainActivity.class).putExtra(Constant.FROM, "tracker").addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP));
-                                }
-                            });
-
-                            btnShopping.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View view) {
-                                    startActivity(new Intent(activity, MainActivity.class).putExtra(Constant.FROM, "").addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP));
-
-                                }
-                            });
-
-                        }
-                        progressBar.setVisibility(View.GONE);
-                    } catch (JSONException e) {
-                        progressBar.setVisibility(View.GONE);
-
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        getCartItemCount(activity, session);
                     }
+                    progressBar.setVisibility(View.GONE);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    progressBar.setVisibility(View.GONE);
+                }
+            }
+        }, activity, Constant.CART_URL, params, false);
+    }
+
+
+    public void getCartItemCount(final Activity activity, Session session) {
+        Map<String, String> params = new HashMap<>();
+        params.put(Constant.GET_USER_CART, Constant.GetVal);
+        params.put(Constant.USER_ID, session.getData(Constant.ID));
+
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        Constant.TOTAL_CART_ITEM = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
+                    } else {
+                        Constant.TOTAL_CART_ITEM = 0;
+                    }
+
+                    Constant.CartValues.clear();
+                    lottieAnimationView.playAnimation();
+
+                    btnShopping.setOnClickListener(view -> startActivity(new Intent(activity, MainActivity.class).putExtra(Constant.FROM, "").addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)));
+                    btnSummary.setOnClickListener(v -> startActivity(new Intent(activity, MainActivity.class).putExtra(Constant.FROM, "tracker")));
+
+                    activity.invalidateOptionsMenu();
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         }, activity, Constant.CART_URL, params, false);
@@ -119,12 +121,13 @@ public class OrderPlacedFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.toolbar_cart).setVisible(false);
         menu.findItem(R.id.toolbar_sort).setVisible(false);

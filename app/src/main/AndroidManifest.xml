@@ -18,12 +18,24 @@
         android:name="android.hardware.camera"
         android:required="true" />
 
-
     <uses-permission
         android:name="android.permission.WRITE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
+    <queries>
+        <!-- List of apps which you want to support for Intent pay -->
+        <package android:name="com.google.android.apps.nbu.paisa.user" />
+        <package android:name="com.phonepe.app" />
+        <!--
+             Specific intents you query for,
+             eg: for a custom share UI
+        -->
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+        </intent>
+    </queries>
 
     <application
+        android:extractNativeLibs="false"
         android:name="com.mykiranamart.user.helper.ApiConfig"
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_descriptor"
@@ -37,13 +49,18 @@
 
         <activity
             android:name="com.mykiranamart.user.activity.WelcomeActivity"
-            tools:ignore="LockedOrientationActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
+
+        <activity
+            android:name="com.mykiranamart.user.activity.PaymentActivity"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
 
         <activity
             android:name="com.mykiranamart.user.activity.PayStackActivity"
-            tools:ignore="LockedOrientationActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
 
         <uses-library
             android:name="org.apache.http.legacy"
@@ -60,24 +77,21 @@
         </provider>
 
         <activity
-            android:name="com.theartofdev.edmodo.cropper.CropImageActivity"
+            android:name="com.canhub.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat" />
         <activity
             android:name="com.mykiranamart.user.activity.MainActivity"
-            tools:ignore="LockedOrientationActivity"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name="com.mykiranamart.user.activity.DrawerActivity"
-            tools:ignore="LockedOrientationActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
         <activity
             android:name="com.mykiranamart.user.activity.LoginActivity"
-            tools:ignore="LockedOrientationActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
         <activity
             android:name="com.mykiranamart.user.activity.SplashActivity"
+            android:screenOrientation="portrait"
             tools:ignore="LockedOrientationActivity"
-            android:screenOrientation="portrait">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -109,16 +123,16 @@
 
         <activity
             android:name="com.mykiranamart.user.activity.PayPalWebActivity"
-            tools:ignore="LockedOrientationActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
         <activity
             android:name="com.mykiranamart.user.activity.MidtransActivity"
-            tools:ignore="LockedOrientationActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
         <activity
             android:name="com.mykiranamart.user.activity.StripeActivity"
-            tools:ignore="LockedOrientationActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -150,6 +164,7 @@
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/colorPrimary" />
 
+        <!--suppress AndroidDomInspection -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_api_key" />

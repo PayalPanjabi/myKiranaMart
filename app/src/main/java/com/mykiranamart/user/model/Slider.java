@@ -1,7 +1,9 @@
 package com.mykiranamart.user.model;
 
 
-public class Slider {
+import java.io.Serializable;
+
+public class Slider implements Serializable {
     final String image;
     String type;
     String type_id;

@@ -1,15 +1,20 @@
 package com.mykiranamart.user.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Category {
-    String id, name, subtitle, image, slug, category_id, payType, status, date, amountReq, month, year, email;
+public class Category implements Serializable {
+    String id;
+    String name;
+    String subtitle;
+    String image;
+    String slug;
+    String category_id;
+    String status;
+    String date;
+    String email;
     String style;
     ArrayList<Product> productList;
-
-    public String getSlug() {
-        return slug;
-    }
 
     public void setSlug(String slug) {
         this.slug = slug;
@@ -47,20 +52,8 @@ public class Category {
         this.image = image;
     }
 
-    public String getCategory_id() {
-        return category_id;
-    }
-
     public void setCategory_id(String category_id) {
         this.category_id = category_id;
-    }
-
-    public String getPayType() {
-        return payType;
-    }
-
-    public void setPayType(String payType) {
-        this.payType = payType;
     }
 
     public String getStatus() {
@@ -77,30 +70,6 @@ public class Category {
 
     public void setDate(String date) {
         this.date = date;
-    }
-
-    public String getAmountReq() {
-        return amountReq;
-    }
-
-    public void setAmountReq(String amountReq) {
-        this.amountReq = amountReq;
-    }
-
-    public String getMonth() {
-        return month;
-    }
-
-    public void setMonth(String month) {
-        this.month = month;
-    }
-
-    public String getYear() {
-        return year;
-    }
-
-    public void setYear(String year) {
-        this.year = year;
     }
 
     public String getEmail() {

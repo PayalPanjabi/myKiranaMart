@@ -2,7 +2,6 @@ package com.mykiranamart.user.adapter;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Build;
@@ -17,7 +16,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.snackbar.Snackbar;
@@ -25,12 +23,6 @@ import com.squareup.picasso.Picasso;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-
-import smartdevelop.ir.eram.showcaseviewlib.GuideView;
-import smartdevelop.ir.eram.showcaseviewlib.config.DismissType;
-import smartdevelop.ir.eram.showcaseviewlib.config.Gravity;
-import smartdevelop.ir.eram.showcaseviewlib.listener.GuideListener;
 import com.mykiranamart.user.R;
 import com.mykiranamart.user.fragment.CartFragment;
 import com.mykiranamart.user.helper.ApiConfig;
@@ -38,52 +30,34 @@ import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
 import com.mykiranamart.user.model.Cart;
 
-
+@SuppressLint("NotifyDataSetChanged")
 public class CartAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     // for load more
     public final int VIEW_TYPE_ITEM = 0;
     public final int VIEW_TYPE_LOADING = 1;
     final Activity activity;
-    final ArrayList<Cart> items;
-    final Context context;
     final Session session;
-    public boolean isLoading;
     String taxPercentage;
+    final String from;
 
 
-    public CartAdapter(Context context, Activity activity, ArrayList<Cart> items) {
-        this.context = context;
+    public CartAdapter(Activity activity, String from) {
         this.activity = activity;
-        this.items = items;
-        session = new Session(context);
+        this.from = from;
+        session = new Session(activity);
         taxPercentage = "0";
     }
 
     public void add(int position, Cart item) {
-        items.add(position, item);
+        CartFragment.carts.add(item);
         notifyItemInserted(position);
     }
 
     public void removeItem(int position) {
+        Cart cart = CartFragment.carts.get(position);
 
-        String taxPercentage1 = "0";
-        Cart cart = items.get(position);
-        try {
-            taxPercentage1 = (Double.parseDouble(cart.getItems().get(0).getTax_percentage()) > 0 ? cart.getItems().get(0).getTax_percentage() : "0");
-        } catch (Exception e) {
-
-        }
-
-        double price = 0;
-        if (cart.getItems().get(0).getDiscounted_price().equals("0") || cart.getItems().get(0).getDiscounted_price().equals("")) {
-            price = ((Float.parseFloat(cart.getItems().get(0).getPrice()) + ((Float.parseFloat(cart.getItems().get(0).getPrice()) * Float.parseFloat(taxPercentage1)) / 100)));
-        } else {
-            price = ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) + ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) * Float.parseFloat(taxPercentage1)) / 100)));
-        }
-
-
-        Constant.FLOAT_TOTAL_AMOUNT -= (price * Integer.parseInt(cart.getQty()));
+        totalCalculate(cart);
 
         if (CartFragment.values.containsKey(cart.getProduct_variant_id())) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -95,48 +69,102 @@ public class CartAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         } else {
             CartFragment.values.put(cart.getProduct_variant_id(), "0");
         }
-        CartFragment.SetData();
 
-        items.remove(cart);
+
+        CartFragment.carts.remove(cart);
         CartFragment.isSoldOut = false;
         notifyDataSetChanged();
         Constant.TOTAL_CART_ITEM = getItemCount();
         CartFragment.SetData();
         activity.invalidateOptionsMenu();
-        if (getItemCount() == 0) {
-            CartFragment.lytempty.setVisibility(View.VISIBLE);
+        if (getItemCount() == 0 && CartFragment.saveForLater.size() == 0) {
+            CartFragment.lytEmpty.setVisibility(View.VISIBLE);
             CartFragment.lytTotal.setVisibility(View.GONE);
+        } else {
+            CartFragment.lytEmpty.setVisibility(View.GONE);
+            CartFragment.lytTotal.setVisibility(View.VISIBLE);
         }
-        showUndoSnackbar(cart, position);
+        showUndoSnackBar(cart, position);
     }
 
-    public void setLoaded() {
-        isLoading = false;
+    public void totalCalculate(Cart cart) {
+        String taxPercentage1 = "0";
+        try {
+            taxPercentage1 = (Double.parseDouble(cart.getItems().get(0).getTax_percentage()) > 0 ? cart.getItems().get(0).getTax_percentage() : "0");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        double price;
+        if (cart.getItems().get(0).getDiscounted_price().equals("0") || cart.getItems().get(0).getDiscounted_price().equals("")) {
+            price = ((Float.parseFloat(cart.getItems().get(0).getPrice()) + ((Float.parseFloat(cart.getItems().get(0).getPrice()) * Float.parseFloat(taxPercentage1)) / 100)));
+        } else {
+            price = ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) + ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) * Float.parseFloat(taxPercentage1)) / 100)));
+        }
+
+        Constant.FLOAT_TOTAL_AMOUNT -= (price * Integer.parseInt(cart.getQty()));
     }
 
+    @SuppressLint("SetTextI18n")
+    public void moveItem(int position) {
+        try {
+            Cart cart = CartFragment.carts.get(position);
+            totalCalculate(cart);
+
+
+
+            CartFragment.carts.remove(cart);
+            CartFragment.cartAdapter.notifyDataSetChanged();
+
+            CartFragment.saveForLater.add(cart);
+            CartFragment.saveForLaterAdapter.notifyDataSetChanged();
+
+            if (CartFragment.lytSaveForLater.getVisibility() == View.GONE)
+                CartFragment.lytSaveForLater.setVisibility(View.VISIBLE);
+
+            CartFragment.tvSaveForLaterTitle.setText(activity.getResources().getString(R.string.save_for_later) + " (" + CartFragment.saveForLater.size() + ")");
+
+            CartFragment.saveForLaterValues.put(cart.getProduct_variant_id(), cart.getQty());
+
+            Constant.TOTAL_CART_ITEM = getItemCount();
+            CartFragment.SetData();
+
+            if (getItemCount() == 0)
+                CartFragment.lytTotal.setVisibility(View.GONE);
+
+            ApiConfig.AddMultipleProductInSaveForLater(session, activity, CartFragment.saveForLaterValues);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @NonNull
     @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, final int viewType) {
-        if (viewType == VIEW_TYPE_ITEM) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.lyt_cartlist, parent, false);
-            return new ProductHolderItems(view);
-        } else if (viewType == VIEW_TYPE_LOADING) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
-            return new ViewHolderLoading(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, final int viewType) {
+        View view;
+        switch (viewType) {
+            case (VIEW_TYPE_ITEM):
+                view = LayoutInflater.from(activity).inflate(R.layout.lyt_cartlist, parent, false);
+                return new HolderItems(view);
+            case (VIEW_TYPE_LOADING):
+                view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
+                return new ViewHolderLoading(view);
+            default:
+                throw new IllegalArgumentException("unexpected viewType: " + viewType);
         }
-
-        return null;
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint("SetTextI18n")
     @Override
-    public void onBindViewHolder(@NotNull RecyclerView.ViewHolder holderparent, final int position) {
-        try {
+    public void onBindViewHolder(@NotNull RecyclerView.ViewHolder holderParent, final int position) {
 
-            if (holderparent instanceof ProductHolderItems) {
-                final ProductHolderItems holder = (ProductHolderItems) holderparent;
-                final Cart cart = items.get(position);
+        int viewType = getItemViewType(position);
+        switch (viewType) {
+            case VIEW_TYPE_ITEM:
+                final HolderItems holder = (HolderItems) holderParent;
+                final Cart cart = CartFragment.carts.get(position);
 
                 double price;
                 double oPrice;
@@ -144,7 +172,7 @@ public class CartAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 try {
                     taxPercentage = (Double.parseDouble(cart.getItems().get(0).getTax_percentage()) > 0 ? cart.getItems().get(0).getTax_percentage() : "0");
                 } catch (Exception e) {
-
+                    e.printStackTrace();
                 }
 
                 Picasso.get()
@@ -153,23 +181,20 @@ public class CartAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         .centerInside()
                         .placeholder(R.drawable.placeholder)
                         .error(R.drawable.placeholder)
-                        .into(holder.imgproduct);
+                        .into(holder.imgProduct);
 
-                holder.imgRemove.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        removeItem(position);
-                    }
-                });
+                holder.tvDelete.setOnClickListener(v -> removeItem(position));
 
-                holder.txtproductname.setText(cart.getItems().get(0).getName());
+                holder.tvAction.setOnClickListener(v -> moveItem(position));
 
-                holder.txtmeasurement.setText(cart.getItems().get(0).getMeasurement() + "\u0020" + cart.getItems().get(0).getUnit());
+                holder.tvProductName.setText(cart.getItems().get(0).getName());
+
+                holder.tvMeasurement.setText(cart.getItems().get(0).getMeasurement() + "\u0020" + cart.getItems().get(0).getUnit());
 
                 if (cart.getItems().get(0).getIsAvailable().equals("false")) {
-                    holder.txtstatus.setVisibility(View.VISIBLE);
-                    holder.txtstatus.setText(activity.getString(R.string.sold_out));
-                    holder.lytqty.setVisibility(View.GONE);
+                    holder.tvStatus.setVisibility(View.VISIBLE);
+
+                    holder.lytQuantity.setVisibility(View.GONE);
                     CartFragment.isSoldOut = true;
                 }
 
@@ -178,28 +203,28 @@ public class CartAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 } else {
                     price = ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) + ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) * Float.parseFloat(taxPercentage)) / 100)));
                     oPrice = ((Float.parseFloat(cart.getItems().get(0).getPrice()) + ((Float.parseFloat(cart.getItems().get(0).getPrice()) * Float.parseFloat(taxPercentage)) / 100)));
-                    holder.txtoriginalprice.setPaintFlags(holder.txtoriginalprice.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
-                    holder.txtoriginalprice.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + oPrice));
+                    holder.tvOriginalPrice.setPaintFlags(holder.tvOriginalPrice.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+                    holder.tvOriginalPrice.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + oPrice));
                 }
-                holder.txtprice.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + price));
 
-                holder.txtQuantity.setText(cart.getQty());
+                holder.tvPrice.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + price));
 
-                holder.txttotalprice.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + price * Integer.parseInt(cart.getQty())));
+                holder.tvQuantity.setText(cart.getQty());
 
-                final double finalPrice = price;
-                holder.btnaddqty.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
+                holder.tvTotalPrice.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + price * Integer.parseInt(cart.getQty())));
+
+                if (from.equals("cart")) {
+                    final double finalPrice = price;
+                    holder.btnAddQty.setOnClickListener(view -> {
 
                         if (ApiConfig.isConnected(activity)) {
-                            if (!(Integer.parseInt(holder.txtQuantity.getText().toString()) >= Float.parseFloat(cart.getItems().get(0).getStock()))) {
-                                if (!(Integer.parseInt(holder.txtQuantity.getText().toString()) + 1 > Integer.parseInt(session.getData(Constant.max_cart_items_count)))) {
-                                    int count = Integer.parseInt(holder.txtQuantity.getText().toString());
+                            if (!(Integer.parseInt(holder.tvQuantity.getText().toString()) >= Float.parseFloat(cart.getItems().get(0).getStock()))) {
+                                if (!(Integer.parseInt(holder.tvQuantity.getText().toString()) + 1 > Integer.parseInt(session.getData(Constant.max_cart_items_count)))) {
+                                    int count = Integer.parseInt(holder.tvQuantity.getText().toString());
                                     count++;
                                     cart.setQty("" + count);
-                                    holder.txtQuantity.setText("" + count);
-                                    holder.txttotalprice.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + finalPrice * count));
+                                    holder.tvQuantity.setText("" + count);
+                                    holder.tvTotalPrice.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + finalPrice * count));
                                     Constant.FLOAT_TOTAL_AMOUNT = Constant.FLOAT_TOTAL_AMOUNT + finalPrice;
                                     if (CartFragment.values.containsKey(cart.getProduct_variant_id())) {
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -220,19 +245,15 @@ public class CartAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                             }
                         }
 
-                    }
-                });
-
-                holder.btnminusqty.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
+                    });
+                    holder.btnMinusQty.setOnClickListener(view -> {
                         if (ApiConfig.isConnected(activity)) {
-                            if (Integer.parseInt(holder.txtQuantity.getText().toString()) > 1) {
-                                int count = Integer.parseInt(holder.txtQuantity.getText().toString());
+                            if (Integer.parseInt(holder.tvQuantity.getText().toString()) > 1) {
+                                int count = Integer.parseInt(holder.tvQuantity.getText().toString());
                                 count--;
                                 cart.setQty("" + count);
-                                holder.txtQuantity.setText("" + count);
-                                holder.txttotalprice.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + finalPrice * count));
+                                holder.tvQuantity.setText("" + count);
+                                holder.tvTotalPrice.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + finalPrice * count));
                                 Constant.FLOAT_TOTAL_AMOUNT = Constant.FLOAT_TOTAL_AMOUNT - finalPrice;
                                 if (CartFragment.values.containsKey(cart.getProduct_variant_id())) {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -247,43 +268,37 @@ public class CartAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                                 CartFragment.SetData();
                             }
                         }
-                    }
-                });
-                if (position == 0) {
-                    if (session.getBoolean("isCartFirstTime")) {
-                        ShowCase(holder);
-                    }
-                }
-                if (getItemCount() == 0) {
-                    CartFragment.lytempty.setVisibility(View.VISIBLE);
-                    CartFragment.lytTotal.setVisibility(View.GONE);
+                    });
                 } else {
-                    CartFragment.lytempty.setVisibility(View.GONE);
-                    CartFragment.lytTotal.setVisibility(View.VISIBLE);
+                    holder.btnAddQty.setVisibility(View.INVISIBLE);
+                    holder.btnMinusQty.setVisibility(View.INVISIBLE);
+                    holder.tvQuantity.setVisibility(View.INVISIBLE);
+                    holder.tvTotalPrice.setVisibility(View.GONE);
+                    holder.tvAction.setText(activity.getString(R.string.move_to_cart));
                 }
-
-            } else if (holderparent instanceof ViewHolderLoading) {
-                ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderparent;
+                break;
+            case VIEW_TYPE_LOADING:
+                ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderParent;
                 loadingViewHolder.progressBar.setIndeterminate(true);
-            }
-        } catch (Exception e) {
-
+                break;
         }
+
+
     }
 
     @Override
     public int getItemCount() {
-        return items.size();
+        return CartFragment.carts.size();
     }
 
     @Override
     public int getItemViewType(int position) {
-        return items.get(position) == null ? VIEW_TYPE_LOADING : VIEW_TYPE_ITEM;
+        return CartFragment.carts.get(position) == null ? VIEW_TYPE_LOADING : VIEW_TYPE_ITEM;
     }
 
     @Override
     public long getItemId(int position) {
-        Cart cart = items.get(position);
+        Cart cart = CartFragment.carts.get(position);
         if (cart != null)
             return Integer.parseInt(cart.getId());
         else
@@ -299,99 +314,84 @@ public class CartAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
     }
 
-    public static class ProductHolderItems extends RecyclerView.ViewHolder {
-        final ImageView imgproduct;
-        final ImageView btnminusqty;
-        final ImageView btnaddqty;
-        final ImageView imgRemove;
-        final TextView txtproductname;
-        final TextView txtmeasurement;
-        final TextView txtprice;
-        final TextView txtoriginalprice;
-        final TextView txtQuantity;
-        final TextView txttotalprice;
-        final TextView txtstatus;
-        final LinearLayout lytqty;
+    public static class HolderItems extends RecyclerView.ViewHolder {
+        final ImageView imgProduct;
+        final ImageView btnMinusQty;
+        final ImageView btnAddQty;
+        final TextView tvProductName;
+        final TextView tvMeasurement;
+        final TextView tvPrice;
+        final TextView tvOriginalPrice;
+        final TextView tvQuantity;
+        final TextView tvTotalPrice;
+        final TextView tvStatus;
+        final TextView tvDelete;
+        final TextView tvAction;
+        final LinearLayout lytQuantity;
         final RelativeLayout lytMain;
 
-        public ProductHolderItems(@NonNull View itemView) {
+        public HolderItems(@NonNull View itemView) {
             super(itemView);
-            imgproduct = itemView.findViewById(R.id.imgproduct);
-            imgRemove = itemView.findViewById(R.id.imgRemove);
+            imgProduct = itemView.findViewById(R.id.imgProduct);
+            tvDelete = itemView.findViewById(R.id.tvDelete);
+            tvAction = itemView.findViewById(R.id.tvAction);
 
-            btnminusqty = itemView.findViewById(R.id.btnminusqty);
-            btnaddqty = itemView.findViewById(R.id.btnaddqty);
+            btnMinusQty = itemView.findViewById(R.id.btnMinusQty);
+            btnAddQty = itemView.findViewById(R.id.btnAddQty);
 
-            txtproductname = itemView.findViewById(R.id.txtproductname);
-            txtmeasurement = itemView.findViewById(R.id.txtmeasurement);
-            txtprice = itemView.findViewById(R.id.txtprice);
-            txtoriginalprice = itemView.findViewById(R.id.txtoriginalprice);
-            txtQuantity = itemView.findViewById(R.id.txtQuantity);
-            txttotalprice = itemView.findViewById(R.id.txttotalprice);
-            txtstatus = itemView.findViewById(R.id.txtstatus);
+            tvProductName = itemView.findViewById(R.id.tvProductName);
+            tvMeasurement = itemView.findViewById(R.id.tvMeasurement);
+            tvPrice = itemView.findViewById(R.id.tvPrice);
+            tvOriginalPrice = itemView.findViewById(R.id.tvOriginalPrice);
+            tvQuantity = itemView.findViewById(R.id.tvQuantity);
+            tvTotalPrice = itemView.findViewById(R.id.tvTotalPrice);
+            tvStatus = itemView.findViewById(R.id.tvStatus);
 
-            lytqty = itemView.findViewById(R.id.lytqty);
+            lytQuantity = itemView.findViewById(R.id.lytQuantity);
             lytMain = itemView.findViewById(R.id.lytMain);
         }
     }
 
-    void showUndoSnackbar(Cart cart, int position) {
+    void showUndoSnackBar(Cart cart, int position) {
         final Snackbar snackbar = Snackbar.make(activity.findViewById(android.R.id.content), activity.getString(R.string.undo_message), Snackbar.LENGTH_LONG);
-        snackbar.setAction(activity.getString(R.string.undo), new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                snackbar.dismiss();
-                String taxPercentage1 = "0";
-                try {
-                    taxPercentage1 = (Double.parseDouble(cart.getItems().get(0).getTax_percentage()) > 0 ? cart.getItems().get(0).getTax_percentage() : "0");
-                } catch (Exception ignored) {
+        snackbar.setAction(activity.getString(R.string.undo), view -> {
+            snackbar.dismiss();
+            String taxPercentage1 = "0";
+            try {
+                taxPercentage1 = (Double.parseDouble(cart.getItems().get(0).getTax_percentage()) > 0 ? cart.getItems().get(0).getTax_percentage() : "0");
+            } catch (Exception e) {
+                e.printStackTrace();
 
-                }
-
-                double price = 0;
-                if (cart.getItems().get(0).getDiscounted_price().equals("0") || cart.getItems().get(0).getDiscounted_price().equals("")) {
-                    price = ((Float.parseFloat(cart.getItems().get(0).getPrice()) + ((Float.parseFloat(cart.getItems().get(0).getPrice()) * Float.parseFloat(taxPercentage1)) / 100)));
-                } else {
-                    price = ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) + ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) * Float.parseFloat(taxPercentage1)) / 100)));
-                }
-
-                Constant.FLOAT_TOTAL_AMOUNT += (price * Integer.parseInt(cart.getQty()));
-
-                CartFragment.values.put(cart.getProduct_variant_id(), cart.getQty());
-
-                add(position, cart);
-                notifyDataSetChanged();
-                CartFragment.SetData();
-                CartFragment.isSoldOut = false;
-                Constant.TOTAL_CART_ITEM = getItemCount();
-                CartFragment.SetData();
-                ApiConfig.AddMultipleProductInCart(session, activity, CartFragment.values);
-                activity.invalidateOptionsMenu();
             }
+
+            double price;
+            if (cart.getItems().get(0).getDiscounted_price().equals("0") || cart.getItems().get(0).getDiscounted_price().equals("")) {
+                price = ((Float.parseFloat(cart.getItems().get(0).getPrice()) + ((Float.parseFloat(cart.getItems().get(0).getPrice()) * Float.parseFloat(taxPercentage1)) / 100)));
+            } else {
+                price = ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) + ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) * Float.parseFloat(taxPercentage1)) / 100)));
+            }
+
+            Constant.FLOAT_TOTAL_AMOUNT += (price * Integer.parseInt(cart.getQty()));
+
+            CartFragment.values.put(cart.getProduct_variant_id(), cart.getQty());
+
+            add(position, cart);
+            notifyDataSetChanged();
+            CartFragment.SetData();
+            CartFragment.isSoldOut = false;
+            Constant.TOTAL_CART_ITEM = getItemCount();
+            CartFragment.SetData();
+            if(getItemCount()!=0){
+                CartFragment.lytTotal.setVisibility(View.VISIBLE);
+                CartFragment.lytEmpty.setVisibility(View.GONE);
+            }
+            ApiConfig.AddMultipleProductInCart(session, activity, CartFragment.values);
+            activity.invalidateOptionsMenu();
         });
         snackbar.setActionTextColor(Color.WHITE);
-        View snackbarView = snackbar.getView();
-        TextView textView = snackbarView.findViewById(R.id.snackbar_text);
+        View snackBarView = snackbar.getView();
+        TextView textView = snackBarView.findViewById(R.id.snackbar_text);
         textView.setMaxLines(5);
         snackbar.show();
-    }
-
-    private void ShowCase(ProductHolderItems holder) {
-        new GuideView.Builder(activity)
-                .setTitle(activity.getString(R.string.remove_item_from_cart))
-                .setContentText(activity.getString(R.string.remove_item_from_cart_message))
-                .setGravity(Gravity.center) //optional
-                .setDismissType(DismissType.anywhere)   //optional - default DismissType.targetView
-                .setTargetView(holder.lytMain)
-                .setGuideListener(new GuideListener() {
-                    @Override
-                    public void onDismiss(View view) {
-                        session.setBoolean("isCartFirstTime", false);
-                    }
-                })
-                .setTitleTextSize(15)   //optional
-                .setContentTextSize(13)   //optional
-                .build()
-                .show();
     }
 }

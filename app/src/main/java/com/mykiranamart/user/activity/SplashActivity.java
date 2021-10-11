@@ -18,7 +18,7 @@ public class SplashActivity extends Activity {
 
     Session session;
     Activity activity;
-    int SPLASH_TIME_OUT = 500;
+    final int SPLASH_TIME_OUT = 500;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,16 +37,15 @@ public class SplashActivity extends Activity {
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     intent.putExtra("id", data.getPath().split("/")[2]);
                     intent.putExtra(Constant.FROM, "share");
-                    intent.putExtra("vpos", 0);
+                    intent.putExtra("variantPosition", 0);
                     startActivity(intent);
                     finish();
                     break;
-
                 case "refer": // Handle the refer deep link
                     if (!session.getBoolean(Constant.IS_USER_LOGIN)) {
-                        Constant.FRND_CODE = data.getPath().split("/")[2];
+                        Constant.FRIEND_CODE_VALUE = data.getPath().split("/")[2];
                         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-                        ClipData clip = ClipData.newPlainText("label", Constant.FRND_CODE);
+                        ClipData clip = ClipData.newPlainText("label", Constant.FRIEND_CODE_VALUE);
                         assert clipboard != null;
                         clipboard.setPrimaryClip(clip);
                         Toast.makeText(SplashActivity.this, R.string.refer_code_copied, Toast.LENGTH_LONG).show();
@@ -56,11 +55,9 @@ public class SplashActivity extends Activity {
                         startActivity(referIntent);
                         finish();
                     } else {
-                        new Handler().postDelayed(() -> startActivity(new Intent(SplashActivity.this, MainActivity.class).putExtra(Constant.FROM, "").addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)), SPLASH_TIME_OUT)
-                        ;
+                        new Handler().postDelayed(() -> startActivity(new Intent(SplashActivity.this, MainActivity.class).putExtra(Constant.FROM, "").addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)), SPLASH_TIME_OUT);
                         Toast.makeText(activity, "You can not use refer code, You have already logged in.", Toast.LENGTH_SHORT).show();
                     }
-
                     break;
             }
         } else {

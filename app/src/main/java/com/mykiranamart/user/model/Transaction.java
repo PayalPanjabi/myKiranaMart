@@ -1,8 +1,18 @@
 package com.mykiranamart.user.model;
 
-public class Transaction {
+import java.io.Serializable;
 
-    String id, user_id, order_id, type, txn_id, payu_txn_id, amount, status, message, transaction_date, date_created;
+public class Transaction implements Serializable {
+
+    String id;
+    String user_id;
+    String order_id;
+    String type;
+    String txn_id;
+    String amount;
+    String status;
+    String message;
+    String date_created;
 
     public String getId() {
         return id;
@@ -39,19 +49,6 @@ public class Transaction {
     public String getTxn_id() {
         return txn_id;
     }
-
-    public void setTxn_id(String txn_id) {
-        this.txn_id = txn_id;
-    }
-
-    public String getPayu_txn_id() {
-        return payu_txn_id;
-    }
-
-    public void setPayu_txn_id(String payu_txn_id) {
-        this.payu_txn_id = payu_txn_id;
-    }
-
     public String getAmount() {
         return amount;
     }
@@ -76,19 +73,7 @@ public class Transaction {
         this.message = message;
     }
 
-    public String getTransaction_date() {
-        return transaction_date;
-    }
-
-    public void setTransaction_date(String transaction_date) {
-        this.transaction_date = transaction_date;
-    }
-
     public String getDate_created() {
         return date_created;
-    }
-
-    public void setDate_created(String date_created) {
-        this.date_created = date_created;
     }
 }

@@ -19,9 +19,9 @@ import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 
+import jp.wasabeef.picasso.transformations.RoundedCornersTransformation;
 import com.mykiranamart.user.R;
 import com.mykiranamart.user.model.Review;
-import com.mykiranamart.user.ui.CircleTransform;
 
 public class ReviewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -30,8 +30,6 @@ public class ReviewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     public final int VIEW_TYPE_LOADING = 1;
     final Activity activity;
     final ArrayList<Review> Reviews;
-    public boolean isLoading;
-    String id = "0";
 
 
     public ReviewAdapter(Activity activity, ArrayList<Review> Reviews) {
@@ -39,42 +37,36 @@ public class ReviewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         this.Reviews = Reviews;
     }
 
-    public void add(int position, Review item) {
-        Reviews.add(position, item);
-        notifyItemInserted(position);
-    }
-
-    public void setLoaded() {
-        isLoading = false;
-    }
-
+    @NonNull
     @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, final int viewType) {
-        if (viewType == VIEW_TYPE_ITEM) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.lyt_review_list, parent, false);
-            return new ReviewItemHolder(view);
-        } else if (viewType == VIEW_TYPE_LOADING) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
-            return new ViewHolderLoading(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, final int viewType) {
+        View view;
+        switch (viewType) {
+            case (VIEW_TYPE_ITEM):
+                view = LayoutInflater.from(activity).inflate(R.layout.lyt_review_list, parent, false);
+                return new HolderItems(view);
+            case (VIEW_TYPE_LOADING):
+                view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
+                return new ViewHolderLoading(view);
+            default:
+                throw new IllegalArgumentException("unexpected viewType: " + viewType);
         }
-
-        return null;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint("SetTextI18n")
     @Override
-    public void onBindViewHolder(RecyclerView.ViewHolder holderparent, final int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holderParent, final int position) {
 
-        if (holderparent instanceof ReviewItemHolder) {
-            final ReviewItemHolder holder = (ReviewItemHolder) holderparent;
+        if (holderParent instanceof HolderItems) {
+            final HolderItems holder = (HolderItems) holderParent;
             final Review review = Reviews.get(position);
 
             Picasso.get()
                     .load(review.getUser_profile().isEmpty() ? "-" : review.getUser_profile())
                     .fit()
                     .centerInside()
-                    .transform(new CircleTransform())
+                    .transform(new RoundedCornersTransformation(20, 0))
                     .placeholder(R.drawable.placeholder)
                     .error(R.drawable.placeholder)
                     .into(holder.imgProfile);
@@ -84,8 +76,8 @@ public class ReviewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             holder.tvName.setText(review.getUsername());
             holder.tvMessage.setText(review.getReview());
 
-        } else if (holderparent instanceof ViewHolderLoading) {
-            ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderparent;
+        } else if (holderParent instanceof ViewHolderLoading) {
+            ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderParent;
             loadingViewHolder.progressBar.setIndeterminate(true);
         }
     }
@@ -104,7 +96,7 @@ public class ReviewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     public long getItemId(int position) {
         Review product = Reviews.get(position);
         if (product != null)
-            return Integer.parseInt(product.getId());
+            return Integer.parseInt(product.getProduct_id());
         else
             return position;
     }
@@ -118,14 +110,14 @@ public class ReviewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
-    class ReviewItemHolder extends RecyclerView.ViewHolder {
+    static class HolderItems extends RecyclerView.ViewHolder {
 
         final ImageView imgProfile;
         final TextView tvName, tvDate, tvMessage;
-        RatingBar ratingReview;
+        final RatingBar ratingReview;
 
 
-        public ReviewItemHolder(@NonNull View itemView) {
+        public HolderItems(@NonNull View itemView) {
             super(itemView);
 
             imgProfile = itemView.findViewById(R.id.imgProfile);

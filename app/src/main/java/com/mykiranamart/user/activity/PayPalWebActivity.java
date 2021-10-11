@@ -4,10 +4,8 @@ package com.mykiranamart.user.activity;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
@@ -16,11 +14,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.cardview.widget.CardView;
 
 import com.android.volley.Request;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 
 import org.json.JSONException;
@@ -31,28 +26,27 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import com.mykiranamart.user.R;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
-import com.mykiranamart.user.helper.PaymentModelClass;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
+
+
 
 public class PayPalWebActivity extends AppCompatActivity {
     Toolbar toolbar;
     WebView webView;
     String url;
-    PaymentModelClass paymentModelClass;
     boolean isTxnInProcess = true;
     String orderId;
     Session session;
     Map<String, String> sendParams;
     String from;
 
-    CardView cardViewHamburger;
-    TextView toolbarTitle;
     ImageView imageMenu;
+    TextView toolbarTitle;
 
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -69,31 +63,22 @@ public class PayPalWebActivity extends AppCompatActivity {
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        cardViewHamburger = findViewById(R.id.cardViewHamburger);
-        toolbarTitle = findViewById(R.id.toolbarTitle);
         imageMenu = findViewById(R.id.imageMenu);
+        toolbarTitle = findViewById(R.id.toolbarTitle);
 
-        getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(false);
         toolbarTitle.setText(getString(R.string.paypal));
 
-        imageMenu.setImageDrawable(getResources().getDrawable(R.drawable.ic_arrow_back));
-        cardViewHamburger.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                onBackPressed();
-            }
-        });
+        imageMenu.setImageResource(R.drawable.ic_arrow_back);
+        imageMenu.setOnClickListener(view -> onBackPressed());
         webView = findViewById(R.id.webView);
-
-        paymentModelClass = new PaymentModelClass(PayPalWebActivity.this);
 
         url = getIntent().getStringExtra("url");
         webView.getSettings().setJavaScriptEnabled(true);
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-
-                if (url.startsWith(Constant.MAINBASEUrl)) {
+                if (url.startsWith(Constant.MainBaseURL)) {
                     GetTransactionResponse(url);
                     return true;
                 } else
@@ -114,75 +99,67 @@ public class PayPalWebActivity extends AppCompatActivity {
                         String status = jsonObject.getString("status");
                         AddTransaction(PayPalWebActivity.this, orderId, getString(R.string.paypal), orderId, status, "", sendParams);
                     } catch (JSONException e) {
-
+                        e.printStackTrace();
                     }
                 },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
+                error -> {
 
-                    }
                 });
         ApiConfig.getInstance().getRequestQueue().getCache().clear();
         ApiConfig.getInstance().addToRequestQueue(stringRequest);
 
     }
 
-    public void AddTransaction(Activity activity, String orderId, String paymentType, String txnid, final String status, String message, Map<String, String> sendparams) {
-        Map<String, String> transparams = new HashMap<>();
-        transparams.put(Constant.ADD_TRANSACTION, Constant.GetVal);
-        transparams.put(Constant.USER_ID, sendparams.get(Constant.USER_ID));
-        transparams.put(Constant.ORDER_ID, orderId);
-        transparams.put(Constant.TYPE, paymentType);
-        transparams.put(Constant.TRANS_ID, txnid);
-        transparams.put(Constant.AMOUNT, sendparams.get(Constant.FINAL_TOTAL));
-        transparams.put(Constant.STATUS, status);
-        transparams.put(Constant.MESSAGE, message);
+    public void AddTransaction(Activity activity, String orderId, String paymentType, String txnid, final String status, String message, Map<String, String> sendParams) {
+        Map<String, String> transactionParams = new HashMap<>();
+        transactionParams.put(Constant.ADD_TRANSACTION, Constant.GetVal);
+        transactionParams.put(Constant.USER_ID, sendParams.get(Constant.USER_ID));
+        transactionParams.put(Constant.ORDER_ID, orderId);
+        transactionParams.put(Constant.TYPE, paymentType);
+        transactionParams.put(Constant.TRANS_ID, txnid);
+        transactionParams.put(Constant.AMOUNT, sendParams.get(Constant.FINAL_TOTAL));
+        transactionParams.put(Constant.STATUS, status);
+        transactionParams.put(Constant.MESSAGE, message);
         Date c = Calendar.getInstance().getTime();
         @SuppressLint("SimpleDateFormat") SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-        transparams.put("transaction_date", df.format(c));
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
+        transactionParams.put("transaction_date", df.format(c));
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
 
-                            if (from.equals(Constant.WALLET)) {
-                                onBackPressed();
-                                ApiConfig.getWalletBalance(activity, session);
-                                Toast.makeText(activity, "Amount will be credited in wallet very soon.", Toast.LENGTH_LONG).show();
-                            } else if (from.equals(Constant.PAYMENT)) {
-                                if (status.equals(Constant.SUCCESS) || status.equals(Constant.AWAITING_PAYMENT)) {
-                                    finish();
-                                    Intent intent = new Intent(activity, MainActivity.class);
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                    intent.putExtra(Constant.FROM, "payment_success");
-                                    activity.startActivity(intent);
-                                } else {
-                                    finish();
-                                }
+                        if (from.equals(Constant.WALLET)) {
+                            onBackPressed();
+                            ApiConfig.getWalletBalance(activity, session);
+                            Toast.makeText(activity, "Amount will be credited in wallet very soon.", Toast.LENGTH_LONG).show();
+                        } else if (from.equals(Constant.PAYMENT)) {
+                            if (status.equals(Constant.SUCCESS) || status.equals(Constant.AWAITING_PAYMENT)) {
+                                finish();
+                                Intent intent = new Intent(activity, MainActivity.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                intent.putExtra(Constant.FROM, "payment_success");
+                                activity.startActivity(intent);
+                            } else {
+                                finish();
                             }
                         }
-                    } catch (JSONException e) {
-
                     }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
-        }, activity, Constant.ORDERPROCESS_URL, transparams, true);
+        }, activity, Constant.ORDER_PROCESS_URL, transactionParams, true);
     }
 
 
     @Override
     public void onBackPressed() {
-        if (PayPalWebActivity.this != null) {
-            if (isTxnInProcess) {
-                ProcessAlertDialog();
-            } else {
-                super.onBackPressed();
-            }
+        if (isTxnInProcess) {
+            ProcessAlertDialog();
+        } else {
+            super.onBackPressed();
         }
     }
 
@@ -199,31 +176,22 @@ public class PayPalWebActivity extends AppCompatActivity {
 
         alertDialog.setCancelable(false);
         final AlertDialog alertDialog1 = alertDialog.create();
-        alertDialog.setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                DeleteTransaction(PayPalWebActivity.this, getIntent().getStringExtra(Constant.ORDER_ID));
-                alertDialog1.dismiss();
-            }
-        }).setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                alertDialog1.dismiss();
-            }
-        });
+        alertDialog.setPositiveButton(getString(R.string.yes), (dialog, which) -> {
+            DeleteTransaction(PayPalWebActivity.this, getIntent().getStringExtra(Constant.ORDER_ID));
+            alertDialog1.dismiss();
+        }).setNegativeButton(getString(R.string.no), (dialog, which) -> alertDialog1.dismiss());
         // Showing Alert Message
         alertDialog.show();
     }
 
     public void DeleteTransaction(Activity activity, String orderId) {
-        Map<String, String> transparams = new HashMap<>();
-        transparams.put(Constant.DELETE_ORDER, Constant.GetVal);
-        transparams.put(Constant.ORDER_ID, orderId);
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    PayPalWebActivity.super.onBackPressed();
-                }
+        Map<String, String> transactionParams = new HashMap<>();
+        transactionParams.put(Constant.DELETE_ORDER, Constant.GetVal);
+        transactionParams.put(Constant.ORDER_ID, orderId);
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                PayPalWebActivity.super.onBackPressed();
             }
-        }, activity, Constant.ORDERPROCESS_URL, transparams, false);
+        }, activity, Constant.ORDER_PROCESS_URL, transactionParams, false);
     }
 }

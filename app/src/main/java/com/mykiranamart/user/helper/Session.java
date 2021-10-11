@@ -2,7 +2,6 @@ package com.mykiranamart.user.helper;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
@@ -20,14 +19,13 @@ public class Session {
     SharedPreferences.Editor editor;
     Context _context;
 
-
     public Session(Context context) {
         try {
             this._context = context;
             pref = _context.getSharedPreferences(PREFER_NAME, PRIVATE_MODE);
             editor = pref.edit();
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
@@ -82,6 +80,11 @@ public class Session {
         editor.commit();
     }
 
+    public void setGrid(String id, boolean val) {
+        editor.putBoolean(id, val);
+        editor.commit();
+    }
+
     public void logoutUser(Activity activity) {
         editor.clear();
         editor.commit();
@@ -105,27 +108,21 @@ public class Session {
         final AlertDialog alertDialog1 = alertDialog.create();
 
         // Setting OK Button
-        alertDialog.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                editor.clear();
-                editor.commit();
+        alertDialog.setPositiveButton(R.string.yes, (dialog, which) -> {
+            editor.clear();
+            editor.commit();
 
-                new Session(_context).setBoolean("is_first_time", true);
+            new Session(_context).setBoolean("is_first_time", true);
 
-                Intent i = new Intent(activity, MainActivity.class);
-                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                i.putExtra(Constant.FROM, "");
-                activity.startActivity(i);
-                activity.finish();
-            }
+            Intent i = new Intent(activity, MainActivity.class);
+            i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            i.putExtra(Constant.FROM, "");
+            activity.startActivity(i);
+            activity.finish();
         });
 
-        alertDialog.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                alertDialog1.dismiss();
-            }
-        });
+        alertDialog.setNegativeButton(R.string.no, (dialog, which) -> alertDialog1.dismiss());
         // Showing Alert Message
         alertDialog.show();
 

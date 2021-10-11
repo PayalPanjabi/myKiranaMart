@@ -6,9 +6,9 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -21,7 +21,6 @@ import com.mykiranamart.user.activity.MainActivity;
 import com.mykiranamart.user.fragment.ProductListFragment;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.model.Category;
-
 
 public class SectionAdapter extends RecyclerView.Adapter<SectionAdapter.SectionHolder> {
 
@@ -65,26 +64,23 @@ public class SectionAdapter extends RecyclerView.Adapter<SectionAdapter.SectionH
                 break;
         }
 
-        holder1.tvMore.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        holder1.tvMore.setOnClickListener(view -> {
 
-                Fragment fragment = new ProductListFragment();
-                Bundle bundle = new Bundle();
-                bundle.putString(Constant.FROM, "section");
-                bundle.putString(Constant.NAME, section.getName());
-                bundle.putString(Constant.ID, section.getId());
-                fragment.setArguments(bundle);
+            Fragment fragment = new ProductListFragment();
+            Bundle bundle = new Bundle();
+            bundle.putString(Constant.FROM, "section");
+            bundle.putString(Constant.NAME, section.getName());
+            bundle.putString(Constant.ID, section.getId());
+            fragment.setArguments(bundle);
 
-                MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
-            }
+            MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
         });
     }
 
+    @NonNull
     @Override
     public SectionHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.section_layout, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.section_layout, parent, false);
         return new SectionHolder(view);
     }
 
@@ -93,12 +89,11 @@ public class SectionAdapter extends RecyclerView.Adapter<SectionAdapter.SectionH
         return position;
     }
 
-    public class SectionHolder extends RecyclerView.ViewHolder {
+    public static class SectionHolder extends RecyclerView.ViewHolder {
         final TextView tvTitle;
         final TextView tvSubTitle;
         final TextView tvMore;
         final RecyclerView recyclerView;
-        final RelativeLayout relativeLayout;
 
         public SectionHolder(View itemView) {
             super(itemView);
@@ -107,7 +102,6 @@ public class SectionAdapter extends RecyclerView.Adapter<SectionAdapter.SectionH
             tvSubTitle = itemView.findViewById(R.id.tvSubTitle);
             tvMore = itemView.findViewById(R.id.tvMore);
             recyclerView = itemView.findViewById(R.id.recyclerView);
-            relativeLayout = itemView.findViewById(R.id.relativeLayout);
 
         }
     }

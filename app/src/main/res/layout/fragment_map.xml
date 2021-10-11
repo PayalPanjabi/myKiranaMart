@@ -28,9 +28,10 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
         android:clickable="true"
+        android:contentDescription="@string/app_name"
         android:focusable="true"
-        app:fabSize="mini"
 
+        app:fabSize="mini"
         app:srcCompat="@drawable/ic_current" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -42,6 +43,7 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
         android:clickable="true"
+        android:contentDescription="@string/app_name"
         android:focusable="true"
         app:fabSize="mini"
 
@@ -55,9 +57,10 @@
         android:layout_alignParentEnd="true"
         android:layout_margin="16dp"
         android:clickable="true"
+        android:contentDescription="@string/app_name"
         android:focusable="true"
         app:fabSize="mini"
-        app:srcCompat="@drawable/ic_streetview" />
+        app:srcCompat="@drawable/ic_street_view" />
 
     <LinearLayout
         android:id="@+id/detailLyt"
@@ -72,6 +75,7 @@
             android:id="@+id/tvLocation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textAlignment="viewStart"
             android:textColor="@color/colorPrimaryDark"
             android:textSize="@dimen/_12ssp" />
 

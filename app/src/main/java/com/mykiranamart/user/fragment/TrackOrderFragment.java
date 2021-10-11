@@ -1,5 +1,12 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+import static com.mykiranamart.user.activity.MainActivity.active;
+import static com.mykiranamart.user.activity.MainActivity.bottomNavigationView;
+import static com.mykiranamart.user.activity.MainActivity.fm;
+import static com.mykiranamart.user.activity.MainActivity.homeClicked;
+import static com.mykiranamart.user.activity.MainActivity.homeFragment;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -29,17 +36,12 @@ import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
 
-import static android.content.Context.INPUT_METHOD_SERVICE;
-import static com.mykiranamart.user.activity.MainActivity.active;
-import static com.mykiranamart.user.activity.MainActivity.bottomNavigationView;
-import static com.mykiranamart.user.activity.MainActivity.fm;
-import static com.mykiranamart.user.activity.MainActivity.homeClicked;
-import static com.mykiranamart.user.activity.MainActivity.homeFragment;
+
 
 
 public class TrackOrderFragment extends Fragment {
     View root;
-    LinearLayout lytempty, lytdata;
+    LinearLayout lytEmpty, lytDate;
     Session session;
     String[] tabs;
     TabLayout tabLayout;
@@ -56,12 +58,12 @@ public class TrackOrderFragment extends Fragment {
         activity = getActivity();
 
         session = new Session(activity);
-        tabs = new String[]{getString(R.string.all), getString(R.string.received), getString(R.string.shipped1), getString(R.string.delivered1), getString(R.string.cancelled1), getString(R.string.returned1)};
-        lytempty = root.findViewById(R.id.lytempty);
-        lytdata = root.findViewById(R.id.lytdata);
+        tabs = new String[]{getString(R.string.all), getString(R.string.received),getString(R.string.processed), getString(R.string.shipped1), getString(R.string.delivered1), getString(R.string.cancelled1), getString(R.string.returned1)};
+        lytEmpty = root.findViewById(R.id.lytEmpty);
+        lytDate = root.findViewById(R.id.lytDate);
         viewPager = root.findViewById(R.id.viewpager);
         viewPager.setOffscreenPageLimit(5);
-        tabLayout = root.findViewById(R.id.tablayout);
+        tabLayout = root.findViewById(R.id.lytTab);
         tabLayout.setupWithViewPager(viewPager);
 
         if (session.getBoolean(Constant.IS_USER_LOGIN)) {
@@ -73,9 +75,9 @@ public class TrackOrderFragment extends Fragment {
             startActivity(new Intent(activity, LoginActivity.class).putExtra(Constant.FROM, "tracker"));
         }
 
-        root.findViewById(R.id.btnorder).setOnClickListener(view -> {
+        root.findViewById(R.id.btnBorder).setOnClickListener(view -> {
             fm.beginTransaction().show(homeFragment).hide(active).commit();
-            bottomNavigationView.setItemActiveIndex(0);
+            bottomNavigationView.setSelectedItemId(0);
             homeClicked = true;
         });
 
@@ -86,10 +88,11 @@ public class TrackOrderFragment extends Fragment {
         adapter = new TrackOrderFragment.ViewPagerAdapter(fm);
         adapter.addFrag(new OrderListAllFragment(), tabs[0]);
         adapter.addFrag(new OrderListReceivedFragment(), tabs[1]);
-        adapter.addFrag(new OrderListShippedFragment(), tabs[2]);
-        adapter.addFrag(new OrderListDeliveredFragment(), tabs[3]);
-        adapter.addFrag(new OrderListCancelledFragment(), tabs[4]);
-        adapter.addFrag(new OrderListReturnedFragment(), tabs[5]);
+        adapter.addFrag(new OrderListProcessedFragment(), tabs[2]);
+        adapter.addFrag(new OrderListShippedFragment(), tabs[3]);
+        adapter.addFrag(new OrderListDeliveredFragment(), tabs[4]);
+        adapter.addFrag(new OrderListCancelledFragment(), tabs[5]);
+        adapter.addFrag(new OrderListReturnedFragment(), tabs[6]);
         viewPager.setAdapter(adapter);
     }
 
@@ -106,19 +109,21 @@ public class TrackOrderFragment extends Fragment {
             InputMethodManager inputMethodManager = (InputMethodManager) activity.getSystemService(INPUT_METHOD_SERVICE);
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
-        } catch (Exception ignored) {
-
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.toolbar_cart).setVisible(true);
         menu.findItem(R.id.toolbar_sort).setVisible(false);
         menu.findItem(R.id.toolbar_search).setVisible(true);
     }
 
+    @SuppressWarnings("deprecation")
     public static class ViewPagerAdapter extends FragmentStatePagerAdapter {
         final List<Fragment> mFragmentList = new ArrayList<>();
         final List<String> mFragmentTitleList = new ArrayList<>();
@@ -138,12 +143,14 @@ public class TrackOrderFragment extends Fragment {
             } else if (position == 1) {
                 fragment = new OrderListReceivedFragment();
             } else if (position == 2) {
-                fragment = new OrderListShippedFragment();
+                fragment = new OrderListProcessedFragment();
             } else if (position == 3) {
-                fragment = new OrderListDeliveredFragment();
+                fragment = new OrderListShippedFragment();
             } else if (position == 4) {
-                fragment = new OrderListCancelledFragment();
+                fragment = new OrderListDeliveredFragment();
             } else if (position == 5) {
+                fragment = new OrderListCancelledFragment();
+            } else if (position == 6) {
                 fragment = new OrderListReturnedFragment();
             }
             assert fragment != null;

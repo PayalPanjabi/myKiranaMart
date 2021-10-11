@@ -1,7 +1,10 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -35,22 +38,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.mykiranamart.user.R;
-import com.mykiranamart.user.activity.MainActivity;
+import com.mykiranamart.user.activity.PaymentActivity;
 import com.mykiranamart.user.adapter.CheckoutItemListAdapter;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.model.Cart;
-
-import static android.content.Context.INPUT_METHOD_SERVICE;
 
 public class CheckoutFragment extends Fragment {
     public static String pCode = "", appliedCode = "", deliveryCharge = "0";
     public static double pCodeDiscount = 0.0, subtotal = 0.0, dCharge = 0.0; //, total = 0.0; //taxAmt = 0.0,
     public TextView tvConfirmOrder, tvPayment, tvDelivery;
-    public ArrayList<String> variantIdList, qtyList;
-    public TextView tvSaveAmount, tvAlert, tvTotalBeforeTax, tvDeliveryCharge, tvSubTotal, txttotalitems;
+    public TextView tvSaveAmount, tvAlert, tvTotalBeforeTax, tvDeliveryCharge, tvSubTotal, tvTotalItems;
     public LinearLayout processLyt;
     CardView lytSaveAmount;
     RecyclerView recyclerView;
@@ -66,6 +65,8 @@ public class CheckoutFragment extends Fragment {
     ArrayList<Cart> carts;
     float OriginalAmount = 0, DiscountedAmount = 0;
     private ShimmerFrameLayout mShimmerViewContainer;
+    String from;
+    ArrayList<String> variantIdList, qtyList;
 
     @SuppressLint("SetTextI18n")
     @Override
@@ -79,7 +80,7 @@ public class CheckoutFragment extends Fragment {
         tvAlert = root.findViewById(R.id.tvAlert);
         edtPromoCode = root.findViewById(R.id.edtPromoCode);
         tvSubTotal = root.findViewById(R.id.tvSubTotal);
-        txttotalitems = root.findViewById(R.id.txttotalitems);
+        tvTotalItems = root.findViewById(R.id.tvTotalItems);
         tvDeliveryCharge = root.findViewById(R.id.tvDeliveryCharge);
         confirmLyt = root.findViewById(R.id.confirmLyt);
         tvConfirmOrder = root.findViewById(R.id.tvConfirmOrder);
@@ -93,50 +94,46 @@ public class CheckoutFragment extends Fragment {
         mShimmerViewContainer = root.findViewById(R.id.mShimmerViewContainer);
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
 
-        carts = new ArrayList<>();
+        assert getArguments() != null;
+        from = getArguments().getString("from");
 
         setHasOptionsMenu(true);
-        txttotalitems.setText(Constant.TOTAL_CART_ITEM + " Items");
+        tvTotalItems.setText(Constant.TOTAL_CART_ITEM + " Items");
+
+        variantIdList = new ArrayList<>();
+        qtyList = new ArrayList<>();
 
         Constant.FLOAT_TOTAL_AMOUNT = 0;
 
-        tvConfirmOrder.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (subtotal != 0 && Constant.FLOAT_TOTAL_AMOUNT != 0) {
-                    Fragment fragment = new PaymentFragment();
-                    Bundle bundle = new Bundle();
-                    bundle.putDouble("subtotal", Double.parseDouble("" + subtotal));
-                    bundle.putDouble("total", Double.parseDouble("" + Constant.FLOAT_TOTAL_AMOUNT));
-                    bundle.putDouble("pCodeDiscount", Double.parseDouble("" + pCodeDiscount));
-                    bundle.putString("pCode", pCode);
-                    bundle.putStringArrayList("variantIdList", variantIdList);
-                    bundle.putStringArrayList("qtyList", qtyList);
-                    bundle.putString(Constant.FROM, "process");
-                    bundle.putString("address", getArguments().getString("address"));
-                    PaymentFragment.paymentMethod = "";
-                    PaymentFragment.deliveryTime = "";
-                    PaymentFragment.deliveryDay = "";
-                    fragment.setArguments(bundle);
-                    MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
-                }
+        tvConfirmOrder.setOnClickListener(view -> {
+            if (subtotal != 0 && Constant.FLOAT_TOTAL_AMOUNT != 0) {
+                PaymentActivity.paymentMethod = "";
+                PaymentActivity.deliveryTime = "";
+                PaymentActivity.deliveryDay = "";
+                assert getArguments() != null;
+                startActivity(new Intent(activity, PaymentActivity.class).putExtra("subtotal", Double.parseDouble("" + subtotal))
+                        .putExtra("total", Double.parseDouble("" + Constant.FLOAT_TOTAL_AMOUNT))
+                        .putExtra("pCodeDiscount", Double.parseDouble("" + pCodeDiscount))
+                        .putExtra("pCode", pCode)
+                        .putExtra("variantIdList", variantIdList)
+                        .putExtra("qtyList", qtyList)
+                        .putExtra(Constant.FROM, "process")
+                        .putExtra("address", getArguments().getString("address"))
+                );
             }
         });
 
-        imgRefresh.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (isApplied) {
-                    btnApply.setEnabled(true);
-                    btnApply.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.colorAccent));
-                    btnApply.setText("Apply");
-                    edtPromoCode.setText("");
-                    isApplied = false;
-                    appliedCode = "";
-                    pCode = "";
-                    pCodeDiscount = 0;
-                    SetDataTotal();
-                }
+        imgRefresh.setOnClickListener(view -> {
+            if (isApplied) {
+                btnApply.setEnabled(true);
+                btnApply.setBackgroundColor(ContextCompat.getColor(activity, R.color.colorAccent));
+                btnApply.setText("Apply");
+                edtPromoCode.setText("");
+                isApplied = false;
+                appliedCode = "";
+                pCode = "";
+                pCodeDiscount = 0;
+                SetDataTotal();
             }
         });
 
@@ -152,34 +149,32 @@ public class CheckoutFragment extends Fragment {
 
 
     void getCartData() {
-        recyclerView.setVisibility(View.GONE);
-        mShimmerViewContainer.setVisibility(View.VISIBLE);
-        mShimmerViewContainer.startShimmer();
+        carts = new ArrayList<>();
+        if (from.equals("login")) {
+            recyclerView.setVisibility(View.GONE);
+            mShimmerViewContainer.setVisibility(View.VISIBLE);
+            mShimmerViewContainer.startShimmer();
 
-        ApiConfig.getCartItemCount(activity, session);
-        subtotal = 0;
-        Map<String, String> params = new HashMap<>();
-        params.put(Constant.GET_USER_CART, Constant.GetVal);
-        params.put(Constant.USER_ID, session.getData(Constant.ID));
-        params.put(Constant.LIMIT, "" + Constant.TOTAL_CART_ITEM);
+            ApiConfig.getCartItemCount(activity, session);
+            subtotal = 0;
+            Map<String, String> params = new HashMap<>();
+            params.put(Constant.GET_USER_CART, Constant.GetVal);
+            params.put(Constant.USER_ID, session.getData(Constant.ID));
 
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void onSuccess(boolean result, String response) {
+            ApiConfig.RequestToVolley((result, response) -> {
                 if (result) {
                     try {
                         JSONObject jsonObject = new JSONObject(response);
                         JSONArray jsonArray = jsonObject.getJSONArray(Constant.DATA);
                         Gson gson = new Gson();
-                        variantIdList = new ArrayList<>();
-                        qtyList = new ArrayList<>();
 
                         for (int i = 0; i < jsonArray.length(); i++) {
                             try {
                                 Cart cart = gson.fromJson(String.valueOf(jsonArray.getJSONObject(i)), Cart.class);
+
                                 variantIdList.add(cart.getProduct_variant_id());
                                 qtyList.add(cart.getQty());
+
                                 float price;
                                 int qty = Integer.parseInt(cart.getQty());
                                 String taxPercentage = cart.getItems().get(0).getTax_percentage();
@@ -197,30 +192,54 @@ public class CheckoutFragment extends Fragment {
 
                                 carts.add(cart);
                             } catch (Exception e) {
-
+                                e.printStackTrace();
                             }
                         }
-
-                        checkoutItemListAdapter = new CheckoutItemListAdapter(getContext(), getActivity(), carts);
-                        recyclerView.setAdapter(checkoutItemListAdapter);
-                        SetDataTotal();
-
-                        confirmLyt.setVisibility(View.VISIBLE);
-                        mShimmerViewContainer.stopShimmer();
-                        mShimmerViewContainer.setVisibility(View.GONE);
-                        recyclerView.setVisibility(View.VISIBLE);
-
                     } catch (JSONException e) {
-
+                        e.printStackTrace();
                         confirmLyt.setVisibility(View.VISIBLE);
                         mShimmerViewContainer.stopShimmer();
                         mShimmerViewContainer.setVisibility(View.GONE);
                         recyclerView.setVisibility(View.VISIBLE);
-
                     }
                 }
+            }, activity, Constant.CART_URL, params, false);
+        } else {
+            try {
+                assert getArguments() != null;
+                carts = (ArrayList<Cart>) requireArguments().getSerializable("data");
+                variantIdList = getArguments().getStringArrayList("variantIdList");
+                qtyList = getArguments().getStringArrayList("qtyList");
+                {
+                    for (int i = 0; i < carts.size(); i++) {
+                        try {
+                            Cart cart = carts.get(i);
+                            float price;
+                            int qty = Integer.parseInt(cart.getQty());
+                            String taxPercentage = cart.getItems().get(0).getTax_percentage();
+
+                            if (cart.getItems().get(0).getDiscounted_price().equals("0") || cart.getItems().get(0).getDiscounted_price().equals("")) {
+                                price = ((Float.parseFloat(cart.getItems().get(0).getPrice()) + ((Float.parseFloat(cart.getItems().get(0).getPrice()) * Float.parseFloat(taxPercentage)) / 100)));
+                            } else {
+                                OriginalAmount += (Float.parseFloat(cart.getItems().get(0).getPrice()) * qty);
+                                DiscountedAmount += (Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) * qty);
+
+                                price = ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) + ((Float.parseFloat(cart.getItems().get(0).getDiscounted_price()) * Float.parseFloat(taxPercentage)) / 100)));
+                            }
+                            Constant.FLOAT_TOTAL_AMOUNT += (price * qty);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }catch (Exception e){
+                e.printStackTrace();
             }
-        }, activity, Constant.CART_URL, params, false);
+        }
+        SetDataTotal();
+
+        checkoutItemListAdapter = new CheckoutItemListAdapter(activity, carts);
+        recyclerView.setAdapter(checkoutItemListAdapter);
     }
 
     @SuppressLint({"SetTextI18n", "DefaultLocale"})
@@ -256,69 +275,62 @@ public class CheckoutFragment extends Fragment {
             }
             tvSubTotal.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + subtotal));
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
+    @SuppressLint("SetTextI18n")
     public void PromoCodeCheck() {
-        btnApply.setOnClickListener(new View.OnClickListener() {
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void onClick(View view) {
-                final String promoCode = edtPromoCode.getText().toString().trim();
-                if (promoCode.isEmpty()) {
-                    tvAlert.setVisibility(View.VISIBLE);
-                    tvAlert.setText("Enter Promo Code");
-                } else if (isApplied && promoCode.equals(appliedCode)) {
-                    Toast.makeText(getContext(), "promo code already applied", Toast.LENGTH_SHORT).show();
-                } else {
-                    if (isApplied) {
-                        SetDataTotal();
-                    }
-                    tvAlert.setVisibility(View.GONE);
-                    btnApply.setVisibility(View.INVISIBLE);
-                    Map<String, String> params = new HashMap<>();
-                    params.put(Constant.VALIDATE_PROMO_CODE, Constant.GetVal);
-                    params.put(Constant.USER_ID, session.getData(Constant.ID));
-                    params.put(Constant.PROMO_CODE, promoCode);
-                    params.put(Constant.TOTAL, String.valueOf((Constant.FLOAT_TOTAL_AMOUNT + dCharge))); // taxAmt +
-
-                    ApiConfig.RequestToVolley(new VolleyCallback() {
-                        @SuppressLint("SetTextI18n")
-                        @Override
-                        public void onSuccess(boolean result, String response) {
-                            if (result) {
-                                try {
-                                    JSONObject object = new JSONObject(response);
-                                    //   System.out.println("===res " + response);
-                                    if (!object.getBoolean(Constant.ERROR)) {
-                                        pCode = object.getString(Constant.PROMO_CODE);
-                                        btnApply.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.light_green));
-                                        btnApply.setText("Applied");
-                                        btnApply.setEnabled(false);
-                                        isApplied = true;
-                                        appliedCode = edtPromoCode.getText().toString();
-                                        dCharge = tvDeliveryCharge.getText().toString().equals(getString(R.string.free)) ? 0.0 : Constant.SETTING_DELIVERY_CHARGE;
-                                        subtotal = (object.getDouble(Constant.DISCOUNTED_AMOUNT));
-                                        pCodeDiscount = Double.parseDouble(object.getString(Constant.DISCOUNT));
-                                        tvSubTotal.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + subtotal));
-                                    } else {
-                                        btnApply.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.colorAccent));
-                                        btnApply.setText("Apply");
-                                        btnApply.setEnabled(true);
-                                        tvAlert.setVisibility(View.VISIBLE);
-                                        tvAlert.setText(object.getString("message"));
-                                    }
-                                    SetDataTotal();
-                                    btnApply.setVisibility(View.VISIBLE);
-                                } catch (JSONException e) {
-
-                                }
-                            }
-                        }
-                    }, activity, Constant.PROMO_CODE_CHECK_URL, params, true);
-
+        btnApply.setOnClickListener(view -> {
+            final String promoCode = edtPromoCode.getText().toString().trim();
+            if (promoCode.isEmpty()) {
+                tvAlert.setVisibility(View.VISIBLE);
+                tvAlert.setText(activity.getString(R.string.enter_promo_code));
+            } else if (isApplied && promoCode.equals(appliedCode)) {
+                Toast.makeText(activity, activity.getString(R.string.promo_code_already_applied), Toast.LENGTH_SHORT).show();
+            } else {
+                if (isApplied) {
+                    SetDataTotal();
                 }
+                tvAlert.setVisibility(View.GONE);
+                btnApply.setVisibility(View.INVISIBLE);
+                Map<String, String> params = new HashMap<>();
+                params.put(Constant.VALIDATE_PROMO_CODE, Constant.GetVal);
+                params.put(Constant.USER_ID, session.getData(Constant.ID));
+                params.put(Constant.PROMO_CODE, promoCode);
+                params.put(Constant.TOTAL, String.valueOf(Constant.FLOAT_TOTAL_AMOUNT)); // taxAmt +
+
+                ApiConfig.RequestToVolley((result, response) -> {
+                    if (result) {
+                        try {
+                            JSONObject object = new JSONObject(response);
+                            //   System.out.println("===res " + response);
+                            if (!object.getBoolean(Constant.ERROR)) {
+                                pCode = object.getString(Constant.PROMO_CODE);
+                                btnApply.setBackgroundColor(ContextCompat.getColor(activity, R.color.light_green));
+                                btnApply.setText(activity.getString(R.string.applied));
+                                btnApply.setEnabled(false);
+                                isApplied = true;
+                                appliedCode = edtPromoCode.getText().toString();
+                                dCharge = tvDeliveryCharge.getText().toString().equals(getString(R.string.free)) ? 0.0 : Constant.SETTING_DELIVERY_CHARGE;
+                                subtotal = (object.getDouble(Constant.DISCOUNTED_AMOUNT));
+                                pCodeDiscount = Double.parseDouble(object.getString(Constant.DISCOUNT));
+                                tvSubTotal.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + subtotal));
+                            } else {
+                                btnApply.setBackgroundColor(ContextCompat.getColor(activity, R.color.colorAccent));
+                                btnApply.setText(activity.getString(R.string.apply));
+                                btnApply.setEnabled(true);
+                                tvAlert.setVisibility(View.VISIBLE);
+                                tvAlert.setText(object.getString(Constant.MESSAGE));
+                            }
+                            SetDataTotal();
+                            btnApply.setVisibility(View.VISIBLE);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, activity, Constant.PROMO_CODE_CHECK_URL, params, true);
+
             }
         });
     }
@@ -337,13 +349,14 @@ public class CheckoutFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
         super.onPrepareOptionsMenu(menu);
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         menu.findItem(R.id.toolbar_cart).setVisible(false);
         menu.findItem(R.id.toolbar_sort).setVisible(false);
         menu.findItem(R.id.toolbar_search).setVisible(false);

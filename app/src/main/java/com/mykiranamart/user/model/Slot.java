@@ -1,12 +1,11 @@
 package com.mykiranamart.user.model;
 
-public class Slot {
+import java.io.Serializable;
+
+public class Slot implements Serializable {
     public final String id;
     public final String title;
     public final String lastOrderTime;
-    public String fromTime;
-    public String toTime;
-    boolean isSlotAvailable;
 
     public Slot(String id, String title, String lastOrderTime) {
         this.id = id;
@@ -15,28 +14,12 @@ public class Slot {
         this.lastOrderTime = lastOrderTime;
     }
 
-    public boolean isSlotAvailable() {
-        return isSlotAvailable;
-    }
-
-    public void setSlotAvailable(boolean slotAvailable) {
-        isSlotAvailable = slotAvailable;
-    }
-
     public String getId() {
         return id;
     }
 
     public String getTitle() {
         return title;
-    }
-
-    public String getFromTime() {
-        return fromTime;
-    }
-
-    public String getToTime() {
-        return toTime;
     }
 
     public String getLastOrderTime() {

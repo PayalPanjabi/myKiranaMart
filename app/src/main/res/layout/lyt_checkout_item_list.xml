@@ -6,6 +6,7 @@
     android:padding="@dimen/dimen_10dp">
 
     <TextView
+                android:textAlignment="viewStart"
         android:id="@+id/tvItemName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -14,12 +15,14 @@
         android:textStyle="bold" />
 
     <TextView
+                android:textAlignment="viewStart"
         android:id="@+id/tvQty"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/tvItemName" />
 
     <TextView
+                android:textAlignment="viewStart"
         android:id="@+id/tvPrice"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -29,6 +32,7 @@
 
 
     <TextView
+                android:textAlignment="viewStart"
         android:id="@+id/tvTaxTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -36,6 +40,7 @@
         android:text="@string/tax" />
 
     <TextView
+                android:textAlignment="viewStart"
         android:id="@+id/tvTaxPercent"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -45,6 +50,7 @@
 
 
     <TextView
+                android:textAlignment="viewStart"
         android:id="@+id/tvTaxAmount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -52,6 +58,7 @@
         android:layout_toEndOf="@id/tvTaxPercent" />
 
     <TextView
+                android:textAlignment="viewStart"
         android:id="@+id/tvSubTotal"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

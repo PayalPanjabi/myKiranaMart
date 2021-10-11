@@ -29,8 +29,6 @@ public class NotificationAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     public final int VIEW_TYPE_LOADING = 1;
     final Activity activity;
     final ArrayList<Notification> Notifications;
-    public boolean isLoading;
-    String id = "0";
 
 
     public NotificationAdapter(Activity activity, ArrayList<Notification> Notifications) {
@@ -38,38 +36,30 @@ public class NotificationAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         this.Notifications = Notifications;
     }
 
-    public void add(int position, Notification item) {
-        Notifications.add(position, item);
-        notifyItemInserted(position);
-    }
-
-    public void setLoaded() {
-        isLoading = false;
-    }
-
+    @NonNull
     @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, final int viewType) {
-        if (viewType == VIEW_TYPE_ITEM) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.lyt_notification_list, parent, false);
-            return new NotificationItemHolder(view);
-        } else if (viewType == VIEW_TYPE_LOADING) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
-            return new ViewHolderLoading(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, final int viewType) {
+        View view;
+        switch (viewType) {
+            case (VIEW_TYPE_ITEM):
+                view = LayoutInflater.from(activity).inflate(R.layout.lyt_notification_list, parent, false);
+                return new HolderItems(view);
+            case (VIEW_TYPE_LOADING):
+                view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
+                return new ViewHolderLoading(view);
+            default:
+                throw new IllegalArgumentException("unexpected viewType: " + viewType);
         }
-
-        return null;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint("SetTextI18n")
     @Override
-    public void onBindViewHolder(RecyclerView.ViewHolder holderparent, final int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holderParent, final int position) {
 
-        if (holderparent instanceof NotificationItemHolder) {
-            final NotificationItemHolder holder = (NotificationItemHolder) holderparent;
+        if (holderParent instanceof HolderItems) {
+            final HolderItems holder = (HolderItems) holderParent;
             final Notification notification = Notifications.get(position);
-
-            id = notification.getId();
 
             if (!notification.getImage().isEmpty()) {
                 holder.image.setVisibility(View.VISIBLE);
@@ -99,8 +89,8 @@ public class NotificationAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             holder.tvTitle.setText(Html.fromHtml(notification.getName()));
             holder.tvMessage.setText(Html.fromHtml(notification.getSubtitle()));
 
-        } else if (holderparent instanceof ViewHolderLoading) {
-            ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderparent;
+        } else if (holderParent instanceof ViewHolderLoading) {
+            ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderParent;
             loadingViewHolder.progressBar.setIndeterminate(true);
         }
     }
@@ -133,14 +123,14 @@ public class NotificationAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         }
     }
 
-    class NotificationItemHolder extends RecyclerView.ViewHolder {
+    static class HolderItems extends RecyclerView.ViewHolder {
 
         final ImageView image;
         final TextView tvTitle;
         final TextView tvMessage;
 
 
-        public NotificationItemHolder(@NonNull View itemView) {
+        public HolderItems(@NonNull View itemView) {
             super(itemView);
 
             image = itemView.findViewById(R.id.image);

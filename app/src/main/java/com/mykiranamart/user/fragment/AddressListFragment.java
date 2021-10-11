@@ -1,5 +1,7 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
@@ -14,7 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.core.widget.NestedScrollView;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -38,55 +40,50 @@ import com.mykiranamart.user.adapter.AddressAdapter;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.model.Address;
-
-import static android.content.Context.INPUT_METHOD_SERVICE;
 
 public class AddressListFragment extends Fragment {
     public static RecyclerView recyclerView;
     public static ArrayList<Address> addresses;
+    @SuppressLint("StaticFieldLeak")
     public static AddressAdapter addressAdapter;
+    @SuppressLint("StaticFieldLeak")
     public static TextView tvAlert;
     public static String selectedAddress = "";
-    public static Activity activity;
-    public NestedScrollView nestedScrollView;
+    public Activity activity;
     public int total = 0;
     FloatingActionButton fabAddAddress;
     View root;
     SwipeRefreshLayout swipeLayout;
-    LinearLayoutManager linearLayoutManager;
-    TextView txttotalitems, tvSubTotal, tvConfirmOrder, tvUpdate, tvCurrent;
-    LinearLayout lytCLocation, processLyt;
+    TextView tvTotalItems;
+    TextView tvSubTotal;
+    TextView tvConfirmOrder;
+    LinearLayout processLyt;
     RelativeLayout confirmLyt;
-    int offset = 0;
     private Session session;
     private ShimmerFrameLayout mShimmerViewContainer;
 
     public void GetDChargeSettings(final Activity activity) {
-        Map<String, String> params = new HashMap<String, String>();
+        Map<String, String> params = new HashMap<>();
         params.put(Constant.GET_SETTINGS, Constant.GetVal);
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            JSONObject object = objectbject.getJSONObject(Constant.SETTINGS);
-                            Constant.SETTING_MINIMUM_AMOUNT_FOR_FREE_DELIVERY = Double.parseDouble(object.getString(Constant.MINIMUM_AMOUNT));
-                            Constant.SETTING_DELIVERY_CHARGE = Double.parseDouble(object.getString(Constant.DELIEVERY_CHARGE));
-                        }
-                        getAddresses();
-                    } catch (JSONException e) {
-                        getAddresses();
-                        e.printStackTrace();
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        JSONObject object = jsonObject.getJSONObject(Constant.SETTINGS);
+                        Constant.SETTING_MINIMUM_AMOUNT_FOR_FREE_DELIVERY = Double.parseDouble(object.getString(Constant.MINIMUM_AMOUNT));
+                        Constant.SETTING_DELIVERY_CHARGE = Double.parseDouble(object.getString(Constant.DELIVERY_CHARGE));
                     }
-                } else {
                     getAddresses();
+                } catch (JSONException e) {
+                    getAddresses();
+                    e.printStackTrace();
                 }
+            } else {
+                getAddresses();
             }
-        }, activity, Constant.ORDERPROCESS_URL, params, false);
+        }, activity, Constant.ORDER_PROCESS_URL, params, false);
     }
 
     @SuppressLint("SetTextI18n")
@@ -100,52 +97,45 @@ public class AddressListFragment extends Fragment {
 
         recyclerView = root.findViewById(R.id.recyclerView);
         swipeLayout = root.findViewById(R.id.swipeLayout);
-        nestedScrollView = root.findViewById(R.id.nestedScrollView);
         tvConfirmOrder = root.findViewById(R.id.tvConfirmOrder);
         tvAlert = root.findViewById(R.id.tvAlert);
-        lytCLocation = root.findViewById(R.id.lytCLocation);
         fabAddAddress = root.findViewById(R.id.fabAddAddress);
         processLyt = root.findViewById(R.id.processLyt);
-        tvUpdate = root.findViewById(R.id.tvUpdate);
-        tvCurrent = root.findViewById(R.id.tvCurrent);
         tvSubTotal = root.findViewById(R.id.tvSubTotal);
-        txttotalitems = root.findViewById(R.id.txttotalitems);
+        tvTotalItems = root.findViewById(R.id.tvTotalItems);
         confirmLyt = root.findViewById(R.id.confirmLyt);
         mShimmerViewContainer = root.findViewById(R.id.mShimmerViewContainer);
-        linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-
-        recyclerView.getItemAnimator().setChangeDuration(0);
 
         if (ApiConfig.isConnected(activity)) {
-            offset = 0;
             GetDChargeSettings(activity);
         }
 
-        if (getArguments().getString(Constant.FROM).equalsIgnoreCase("process")) {
+        assert getArguments() != null;
+        if (getArguments().getString(Constant.FROM).equalsIgnoreCase("process") || getArguments().getString(Constant.FROM).equalsIgnoreCase("login")) {
             processLyt.setVisibility(View.VISIBLE);
             confirmLyt.setVisibility(View.VISIBLE);
             tvSubTotal.setText(session.getData(Constant.currency) + ApiConfig.StringFormat("" + getArguments().getDouble("total")));
-            txttotalitems.setText(Constant.TOTAL_CART_ITEM + " Items");
-            tvConfirmOrder.setOnClickListener(new View.OnClickListener() {
-                @SuppressLint("SetTextI18n")
-                @Override
-                public void onClick(View view) {
-                    if (!selectedAddress.isEmpty()) {
-                        Fragment fragment = new CheckoutFragment();
-                        Bundle bundle = new Bundle();
-                        bundle.putString("address", selectedAddress);
-                        fragment.setArguments(bundle);
-                        MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
-                        try {
-                            if (CheckoutFragment.pCodeDiscount != 0) {
-                                CheckoutFragment.pCodeDiscount = 0;
-                            }
-                        } catch (Exception ignore) {
-
+            tvTotalItems.setText(Constant.TOTAL_CART_ITEM + " Items");
+            tvConfirmOrder.setOnClickListener(view -> {
+                if (!selectedAddress.isEmpty()) {
+                    Fragment fragment = new CheckoutFragment();
+                    Bundle bundle = new Bundle();
+                    bundle.putString("address", selectedAddress);
+                    bundle.putString("from", getArguments().getString("from"));
+                    bundle.putSerializable("data", getArguments().getSerializable("data"));
+                    bundle.putStringArrayList("variantIdList", getArguments().getStringArrayList("variantIdList"));
+                    bundle.putStringArrayList("qtyList", getArguments().getStringArrayList("qtyList"));
+                    fragment.setArguments(bundle);
+                    MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
+                    try {
+                        if (CheckoutFragment.pCodeDiscount != 0) {
+                            CheckoutFragment.pCodeDiscount = 0;
                         }
-                    } else {
-                        Toast.makeText(activity, R.string.select_delivery_address, Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
+                } else {
+                    Toast.makeText(activity, R.string.select_delivery_address, Toast.LENGTH_SHORT).show();
                 }
             });
         } else {
@@ -155,22 +145,13 @@ public class AddressListFragment extends Fragment {
 
         setHasOptionsMenu(true);
 
-        swipeLayout.setColorSchemeColors(getResources().getColor(R.color.colorPrimary));
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                swipeLayout.setRefreshing(false);
-                offset = 0;
-                GetDChargeSettings(activity);
-            }
+        swipeLayout.setColorSchemeColors(ContextCompat.getColor(activity, R.color.colorPrimary));
+        swipeLayout.setOnRefreshListener(() -> {
+            swipeLayout.setRefreshing(false);
+            GetDChargeSettings(activity);
         });
 
-        fabAddAddress.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                addNewAddress();
-            }
-        });
+        fabAddAddress.setOnClickListener(view -> addNewAddress());
 
         return root;
     }
@@ -194,51 +175,48 @@ public class AddressListFragment extends Fragment {
         final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(activity);
         recyclerView.setLayoutManager(linearLayoutManager);
 
-        Map<String, String> params = new HashMap<String, String>();
+        Map<String, String> params = new HashMap<>();
         params.put(Constant.GET_ADDRESSES, Constant.GetVal);
         params.put(Constant.USER_ID, session.getData(Constant.ID));
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        Constant.selectedAddressId = "";
-                        JSONObject jsonObject = new JSONObject(response);
-                        if (!jsonObject.getBoolean(Constant.ERROR)) {
-                            total = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
-                            session.setData(Constant.TOTAL, String.valueOf(total));
-                            JSONObject object = new JSONObject(response);
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-                            Gson g = new Gson();
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    Constant.selectedAddressId = "";
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        total = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
+                        session.setData(Constant.TOTAL, String.valueOf(total));
+                        JSONObject object = new JSONObject(response);
+                        JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                        Gson g = new Gson();
 
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject jsonObject1 = jsonArray.getJSONObject(i);
 
-                                if (jsonObject1 != null) {
-                                    Address address = g.fromJson(jsonObject1.toString(), Address.class);
-                                    if (address.getIs_default().equals("1")) {
-                                        Constant.selectedAddressId = address.getId();
-                                    }
-                                    addresses.add(address);
-                                } else {
-                                    break;
+                            if (jsonObject1 != null) {
+                                Address address = g.fromJson(jsonObject1.toString(), Address.class);
+                                if (address.getIs_default().equals("1")) {
+                                    Constant.selectedAddressId = address.getId();
                                 }
-
+                                addresses.add(address);
+                            } else {
+                                break;
                             }
-                            addressAdapter = new AddressAdapter(getContext(), activity, addresses);
-                            recyclerView.setAdapter(addressAdapter);
-                        } else {
-                            recyclerView.setVisibility(View.GONE);
-                            tvAlert.setVisibility(View.VISIBLE);
+
                         }
-                        mShimmerViewContainer.stopShimmer();
-                        mShimmerViewContainer.setVisibility(View.GONE);
-                        recyclerView.setVisibility(View.VISIBLE);
-                    } catch (JSONException e) {
-                        mShimmerViewContainer.stopShimmer();
-                        mShimmerViewContainer.setVisibility(View.GONE);
-                        recyclerView.setVisibility(View.VISIBLE);
+                        addressAdapter = new AddressAdapter(activity, activity, addresses);
+                        recyclerView.setAdapter(addressAdapter);
+                    } else {
+                        recyclerView.setVisibility(View.GONE);
+                        tvAlert.setVisibility(View.VISIBLE);
                     }
+                    mShimmerViewContainer.stopShimmer();
+                    mShimmerViewContainer.setVisibility(View.GONE);
+                    recyclerView.setVisibility(View.VISIBLE);
+                } catch (JSONException e) {
+                    mShimmerViewContainer.stopShimmer();
+                    mShimmerViewContainer.setVisibility(View.GONE);
+                    recyclerView.setVisibility(View.VISIBLE);
                 }
             }
         }, activity, Constant.GET_ADDRESS_URL, params, false);
@@ -258,12 +236,13 @@ public class AddressListFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.toolbar_cart).setVisible(false);
         menu.findItem(R.id.toolbar_sort).setVisible(false);

@@ -13,7 +13,7 @@
         android:layout_height="match_parent"
         android:layout_gravity="center_horizontal"
         android:adjustViewBounds="true"
-        android:scaleType="fitXY"
-        android:contentDescription="@string/app_name" />
+        android:contentDescription="@string/app_name"
+        android:scaleType="fitXY" />
 
 </androidx.cardview.widget.CardView>

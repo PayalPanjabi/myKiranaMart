@@ -1,8 +1,17 @@
 package com.mykiranamart.user.model;
 
-public class WalletTransaction {
+import java.io.Serializable;
 
-    String id, user_id, order_id, type, txn_id, amount, status, message, date_created, last_updated;
+public class WalletTransaction implements Serializable {
+
+    String id;
+    String user_id;
+    String order_id;
+    String type;
+    String amount;
+    String status;
+    String message;
+    String date_created;
 
     public String getId() {
         return id;
@@ -36,14 +45,6 @@ public class WalletTransaction {
         this.type = type;
     }
 
-    public String getTxn_id() {
-        return txn_id;
-    }
-
-    public void setTxn_id(String txn_id) {
-        this.txn_id = txn_id;
-    }
-
     public String getAmount() {
         return amount;
     }
@@ -70,17 +71,5 @@ public class WalletTransaction {
 
     public String getDate_created() {
         return date_created;
-    }
-
-    public void setDate_created(String date_created) {
-        this.date_created = date_created;
-    }
-
-    public String getLast_updated() {
-        return last_updated;
-    }
-
-    public void setLast_updated(String last_updated) {
-        this.last_updated = last_updated;
     }
 }

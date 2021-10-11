@@ -24,8 +24,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -33,7 +31,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.IdRes;
+import androidx.core.content.ContextCompat;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
@@ -41,7 +39,6 @@ import com.android.volley.NetworkError;
 import com.android.volley.ParseError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
-import com.android.volley.Response;
 import com.android.volley.ServerError;
 import com.android.volley.TimeoutError;
 import com.android.volley.VolleyError;
@@ -49,7 +46,6 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -57,7 +53,7 @@ import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.google.android.material.navigation.NavigationView;
+import com.google.gson.Gson;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -82,13 +78,12 @@ import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import com.mykiranamart.user.R;
-import com.mykiranamart.user.activity.DrawerActivity;
-import com.mykiranamart.user.model.Favorite;
 import com.mykiranamart.user.model.OrderTracker;
-import com.mykiranamart.user.model.PriceVariation;
 import com.mykiranamart.user.model.Product;
 import com.mykiranamart.user.model.Slider;
 
+
+@SuppressLint("SetTextI18n")
 public class ApiConfig extends Application {
 
     public static final String TAG = ApiConfig.class.getSimpleName();
@@ -105,7 +100,7 @@ public class ApiConfig extends Application {
             } else if (error instanceof ServerError) {
                 message = "The server could not be found. Please try again after some time!!";
             } else if (error instanceof AuthFailureError) {
-//                message = "Cannot connect to Internet...Please check your connection!";
+                message = "Cannot connect to Internet...Please check your connection!";
             } else if (error instanceof ParseError) {
                 message = "Parsing error! Please try again after some time!!";
             } else if (error instanceof TimeoutError) {
@@ -113,12 +108,13 @@ public class ApiConfig extends Application {
             } else
                 message = "";
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
         return message;
     }
 
 
+    @SuppressWarnings("deprecation")
     public static void displayLocationSettingsRequest(final Activity activity) {
         GoogleApiClient googleApiClient = new GoogleApiClient.Builder(activity)
                 .addApi(LocationServices.API).build();
@@ -133,22 +129,18 @@ public class ApiConfig extends Application {
         builder.setAlwaysShow(true);
 
         PendingResult<LocationSettingsResult> result = LocationServices.SettingsApi.checkLocationSettings(googleApiClient, builder.build());
-        result.setResultCallback(new ResultCallback<LocationSettingsResult>() {
-            @Override
-            public void onResult(LocationSettingsResult result) {
-                final Status status = result.getStatus();
-                switch (status.getStatusCode()) {
-                    case LocationSettingsStatusCodes.SUCCESS:
-
-                        break;
-                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                        try {
-                            status.startResolutionForResult(activity, 110);
-                        } catch (IntentSender.SendIntentException e) {
-                            Log.i("TAG", "PendingIntent unable to execute request.");
-                        }
-                        break;
-                }
+        result.setResultCallback(result1 -> {
+            final Status status = result1.getStatus();
+            switch (status.getStatusCode()) {
+                case LocationSettingsStatusCodes.SUCCESS:
+                    break;
+                case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                    try {
+                        status.startResolutionForResult(activity, 110);
+                    } catch (IntentSender.SendIntentException e) {
+                        Log.i("TAG", "PendingIntent unable to execute request.");
+                    }
+                    break;
             }
         });
     }
@@ -160,69 +152,69 @@ public class ApiConfig extends Application {
                 if (jsonArray.getJSONObject(i) != null) {
                     JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-                    String laststatusname = null, laststatusdate = null;
-                    JSONArray statusarray = jsonObject.getJSONArray("status");
-                    ArrayList<OrderTracker> statusarraylist = new ArrayList<>();
+                    String lastStatusName = null, lastStatusDate = null;
+                    JSONArray statusArray = jsonObject.getJSONArray("status");
+                    ArrayList<OrderTracker> statusArraylist = new ArrayList<>();
 
-                    for (int k = 0; k < statusarray.length(); k++) {
-                        JSONArray sarray = statusarray.getJSONArray(k);
-                        String sname = sarray.getString(0);
-                        String sdate = sarray.getString(1);
+                    for (int k = 0; k < statusArray.length(); k++) {
+                        JSONArray sArray = statusArray.getJSONArray(k);
+                        String sName = sArray.getString(0);
+                        String sDate = sArray.getString(1);
 
-                        statusarraylist.add(new OrderTracker(sname, sdate));
-                        laststatusname = sname;
-                        laststatusdate = sdate;
+                        statusArraylist.add(new OrderTracker(sName, sDate));
+                        lastStatusName = sName;
+                        lastStatusDate = sDate;
                     }
 
                     ArrayList<OrderTracker> itemList = new ArrayList<>();
-                    JSONArray itemsarray = jsonObject.getJSONArray("items");
+                    JSONArray itemsArray = jsonObject.getJSONArray("items");
 
-                    for (int j = 0; j < itemsarray.length(); j++) {
+                    for (int j = 0; j < itemsArray.length(); j++) {
 
-                        JSONObject itemobj = itemsarray.getJSONObject(j);
+                        JSONObject itemObject = itemsArray.getJSONObject(j);
 
-                        JSONArray statusarray1 = itemobj.getJSONArray("status");
+                        JSONArray statusArray1 = itemObject.getJSONArray("status");
                         ArrayList<OrderTracker> statusList = new ArrayList<>();
 
-                        for (int k = 0; k < statusarray1.length(); k++) {
-                            JSONArray sarray = statusarray1.getJSONArray(k);
-                            String sname = sarray.getString(0);
-                            String sdate = sarray.getString(1);
-                            statusList.add(new OrderTracker(sname, sdate));
+                        for (int k = 0; k < statusArray1.length(); k++) {
+                            JSONArray sArray = statusArray1.getJSONArray(k);
+                            String sName = sArray.getString(0);
+                            String sDate = sArray.getString(1);
+                            statusList.add(new OrderTracker(sName, sDate));
                         }
-                        itemList.add(new OrderTracker(itemobj.getString(Constant.ID),
-                                itemobj.getString(Constant.ORDER_ID),
-                                itemobj.getString(Constant.PRODUCT_VARIANT_ID),
-                                itemobj.getString(Constant.QUANTITY),
-                                itemobj.getString(Constant.PRICE),
-                                itemobj.getString(Constant.DISCOUNT),
-                                itemobj.getString(Constant.SUB_TOTAL),
-                                itemobj.getString(Constant.DELIVER_BY),
-                                itemobj.getString(Constant.NAME),
-                                itemobj.getString(Constant.IMAGE),
-                                itemobj.getString(Constant.MEASUREMENT),
-                                itemobj.getString(Constant.UNIT),
+                        itemList.add(new OrderTracker(itemObject.getString(Constant.ID),
+                                itemObject.getString(Constant.ORDER_ID),
+                                itemObject.getString(Constant.PRODUCT_VARIANT_ID),
+                                itemObject.getString(Constant.QUANTITY),
+                                itemObject.getString(Constant.PRICE),
+                                itemObject.getString(Constant.DISCOUNT),
+                                itemObject.getString(Constant.SUB_TOTAL),
+                                itemObject.getString(Constant.DELIVER_BY),
+                                itemObject.getString(Constant.NAME),
+                                itemObject.getString(Constant.IMAGE),
+                                itemObject.getString(Constant.MEASUREMENT),
+                                itemObject.getString(Constant.UNIT),
                                 jsonObject.getString(Constant.PAYMENT_METHOD),
-                                itemobj.getString(Constant.ACTIVE_STATUS),
-                                itemobj.getString(Constant.DATE_ADDED),
+                                itemObject.getString(Constant.ACTIVE_STATUS),
+                                itemObject.getString(Constant.DATE_ADDED),
                                 statusList,
-                                itemobj.getString(Constant.RETURN_STATUS),
-                                itemobj.getString(Constant.CANCELLABLE_STATUS),
-                                itemobj.getString(Constant.TILL_STATUS),
-                                itemobj.getString(Constant.DISCOUNTED_PRICE),
-                                itemobj.getString(Constant.TAX_PERCENT),
-                                itemobj.getString(Constant.RATE),
-                                itemobj.getString(Constant.REVIEW),
-                                itemobj.getString(Constant.REVIEW_STATUS),
-                                itemobj.getString(Constant.PRODUCT_ID)));
+                                itemObject.getString(Constant.RETURN_STATUS),
+                                itemObject.getString(Constant.CANCELLABLE_STATUS),
+                                itemObject.getString(Constant.TILL_STATUS),
+                                itemObject.getString(Constant.DISCOUNTED_PRICE),
+                                itemObject.getString(Constant.TAX_PERCENT),
+                                itemObject.getString(Constant.RATE),
+                                itemObject.getString(Constant.REVIEW),
+                                itemObject.getString(Constant.REVIEW_STATUS),
+                                itemObject.getString(Constant.PRODUCT_ID)));
                     }
                     OrderTracker orderTracker = new OrderTracker(
                             jsonObject.getString(Constant.OTP),
                             jsonObject.getString(Constant.USER_ID),
                             jsonObject.getString(Constant.ID),
                             jsonObject.getString(Constant.DATE_ADDED),
-                            laststatusname, laststatusdate,
-                            statusarraylist,
+                            lastStatusName, lastStatusDate,
+                            statusArraylist,
                             jsonObject.getString(Constant.MOBILE),
                             jsonObject.getString(Constant.DELIVERY_CHARGE),
                             jsonObject.getString(Constant.PAYMENT_METHOD),
@@ -254,56 +246,45 @@ public class ApiConfig extends Application {
         return String.format("%.2f", Double.parseDouble(number));
     }
 
-    public static void setWindowFlag(final int bits, boolean on, Activity context) {
-        Window win = context.getWindow();
-        WindowManager.LayoutParams winParams = win.getAttributes();
-        if (on) {
-            winParams.flags |= bits;
-        } else {
-            winParams.flags &= ~bits;
-        }
-        win.setAttributes(winParams);
-    }
-
-    public static String getMonth(int monthNo) {
+    public static String getMonth(Activity activity,int monthNo) {
         String month = "";
 
         switch (monthNo) {
             case 1:
-                month = "Jan";
+                month = activity.getString(R.string.january);
                 break;
             case 2:
-                month = "Feb";
+                month = activity.getString(R.string.february);
                 break;
             case 3:
-                month = "Mar";
+                month = activity.getString(R.string.march);
                 break;
             case 4:
-                month = "Apr";
+                month = activity.getString(R.string.april);
                 break;
             case 5:
-                month = "May";
+                month = activity.getString(R.string.may);
                 break;
             case 6:
-                month = "Jun";
+                month = activity.getString(R.string.june);
                 break;
             case 7:
-                month = "Jul";
+                month = activity.getString(R.string.july);
                 break;
             case 8:
-                month = "Aug";
+                month = activity.getString(R.string.august);
                 break;
             case 9:
-                month = "Sep";
+                month = activity.getString(R.string.september);
                 break;
             case 10:
-                month = "Oct";
+                month = activity.getString(R.string.october);
                 break;
             case 11:
-                month = "Nov";
+                month = activity.getString(R.string.november);
                 break;
             case 12:
-                month = "Dec";
+                month = activity.getString(R.string.december);
                 break;
             default:
                 break;
@@ -311,45 +292,35 @@ public class ApiConfig extends Application {
         return month;
     }
 
-    public static String getDayOfWeek(int dayNo) {
+    public static String getDayOfWeek(Activity activity,int dayNo) {
         String month = "";
 
         switch (dayNo) {
             case 1:
-                month = "Sun";
+                month = activity.getString(R.string.sunday);
                 break;
             case 2:
-                month = "Mon";
+                month = activity.getString(R.string.monday);
                 break;
             case 3:
-                month = "Tue";
+                month = activity.getString(R.string.tuesday);
                 break;
             case 4:
-                month = "Wed";
+                month = activity.getString(R.string.wednesday);
                 break;
             case 5:
-                month = "Thu";
+                month = activity.getString(R.string.thursday);
                 break;
             case 6:
-                month = "Fri";
+                month = activity.getString(R.string.friday);
                 break;
             case 7:
-                month = "Sat";
+                month = activity.getString(R.string.saturday);
                 break;
             default:
                 break;
         }
         return month;
-    }
-
-    public static void updateNavItemCounter(NavigationView nav, @IdRes int itemId, int count) {
-        TextView view = nav.getMenu().findItem(itemId).getActionView().findViewById(R.id.counter);
-        view.setText(String.valueOf(count));
-        if (count <= 0) {
-            view.setVisibility(View.GONE);
-        } else {
-            view.setVisibility(View.VISIBLE);
-        }
     }
 
     public static ArrayList<String> getDates(String startDate, String endDate) {
@@ -364,7 +335,7 @@ public class ApiConfig extends Application {
             date1 = df1.parse(startDate);
             date2 = df1.parse(endDate);
         } catch (ParseException e) {
-
+            e.printStackTrace();
         }
 
         Calendar cal1 = Calendar.getInstance();
@@ -388,19 +359,7 @@ public class ApiConfig extends Application {
         Map<String, String> params = new HashMap<>();
         params.put(Constant.DELETE_ADDRESS, Constant.GetVal);
         params.put(Constant.ID, addressId);
-
         ApiConfig.RequestToVolley((result, response) -> {
-            if (result) {
-                try {
-                    JSONObject jsonObject = new JSONObject(response);
-                    if (!jsonObject.getBoolean(Constant.ERROR)) {
-
-                    }
-                } catch (JSONException e) {
-
-                }
-
-            }
         }, activity, Constant.GET_ADDRESS_URL, params, false);
     }
 
@@ -420,7 +379,7 @@ public class ApiConfig extends Application {
                     }
                     activity.invalidateOptionsMenu();
                 } catch (JSONException e) {
-
+                    e.printStackTrace();
                 }
 
             }
@@ -436,41 +395,30 @@ public class ApiConfig extends Application {
         }
         params.put(Constant.USER_ID, session.getData(Constant.ID));
         params.put(Constant.PRODUCT_ID, productID);
-
         ApiConfig.RequestToVolley((result, response) -> {
-            if (result) {
-
-            }
         }, activity, Constant.GET_FAVORITES_URL, params, false);
     }
 
-    public static void RequestToVolley(final VolleyCallback callback, final Activity activity, final String url, final Map<String, String> params, final boolean isprogress) {
+    public static void RequestToVolley(final VolleyCallback callback, final Activity activity, final String url, final Map<String, String> params, final boolean isProgress) {
         if (ProgressDisplay.mProgressBar != null) {
             ProgressDisplay.mProgressBar.setVisibility(View.GONE);
         }
         final ProgressDisplay progressDisplay = new ProgressDisplay(activity);
         progressDisplay.hideProgress();
         if (ApiConfig.isConnected(activity)) {
-            if (isprogress)
+            if (isProgress)
                 progressDisplay.showProgress();
-            StringRequest stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
-                @Override
-                public void onResponse(String response) {
-                    callback.onSuccess(true, response);
-                    if (isprogress)
-                        progressDisplay.hideProgress();
-
-                }
+            StringRequest stringRequest = new StringRequest(Request.Method.POST, url, response -> {
+                callback.onSuccess(true, response);
+                if (isProgress) progressDisplay.hideProgress();
             },
                     error -> {
-                        if (isprogress)
-                            progressDisplay.hideProgress();
+                        if (isProgress) progressDisplay.hideProgress();
                         callback.onSuccess(false, "");
                         String message = VolleyErrorMessage(error);
                         if (!message.equals(""))
                             Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
                     }) {
-
                 @Override
                 public Map<String, String> getHeaders() {
                     Map<String, String> params1 = new HashMap<>();
@@ -492,36 +440,34 @@ public class ApiConfig extends Application {
 
     }
 
-    public static void RequestToVolley(final VolleyCallback callback, final String url, final Map<String, String> params) {
 
+    public static void RequestToVolley(final VolleyCallback callback, final Activity activity, final String url, final Map<String, String> params, final Map<String, String> fileParams) {
+        if (isConnected(activity)) {
+            VolleyMultiPartRequest multipartRequest = new VolleyMultiPartRequest(url, response -> callback.onSuccess(true, response),
+                    error -> callback.onSuccess(false, "")) {
+                @Override
+                public Map<String, String> getHeaders() {
+                    Map<String, String> params1 = new HashMap<>();
+                    params1.put(Constant.AUTHORIZATION, "Bearer " + createJWT("eKart", "eKart Authentication"));
+                    return params1;
+                }
 
-        StringRequest stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
-            @Override
-            public void onResponse(String response) {
-                callback.onSuccess(true, response);
+                @Override
+                public Map<String, String> getDefaultParams() {
+                    params.put(Constant.AccessKey, Constant.AccessKeyVal);
+                    return params;
+                }
 
-            }
+                @Override
+                public Map<String, String> getFileParams() {
+                    return fileParams;
+                }
+            };
 
-        },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-
-                        callback.onSuccess(false, "");
-
-
-                    }
-                }) {
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
-                params.put(Constant.AccessKey, Constant.AccessKeyVal);
-                return params;
-            }
-        };
-        getInstance().getRequestQueue().getCache().clear();
-        getInstance().addToRequestQueue(stringRequest);
-
-
+            multipartRequest.setRetryPolicy(new DefaultRetryPolicy(0, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+            getInstance().getRequestQueue().getCache().clear();
+            getInstance().addToRequestQueue(multipartRequest);
+        }
     }
 
     public static String toTitleCase(String str) {
@@ -565,21 +511,21 @@ public class ApiConfig extends Application {
 
             return builder.compact();
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
         return null;
     }
 
 
-    public static boolean CheckValidattion(String item, boolean isemailvalidation, boolean ismobvalidation) {
+    public static boolean CheckValidation(String item, boolean isMailValidation, boolean isMobileValidation) {
         boolean result = false;
         if (item.length() == 0) {
             result = true;
-        } else if (isemailvalidation) {
+        } else if (isMailValidation) {
             if (!android.util.Patterns.EMAIL_ADDRESS.matcher(item).matches()) {
                 result = true;
             }
-        } else if (ismobvalidation) {
+        } else if (isMobileValidation) {
             if (!android.util.Patterns.PHONE.matcher(item).matches()) {
                 result = true;
             }
@@ -588,40 +534,56 @@ public class ApiConfig extends Application {
     }
 
     @SuppressLint("DefaultLocale")
-    public static String GetDiscount(String oldprice, String newprice) {
-        double dold = Double.parseDouble(oldprice);
-        double dnew = Double.parseDouble(newprice);
-
-        return " (" + String.format("%.2f", (((dnew / dold) - 1) * 100)) + "%)";
+    public static String GetDiscount(double OriginalPrice, double DiscountedPrice) {
+        return String.format("%.0f", Double.parseDouble("" + (((((OriginalPrice - DiscountedPrice) + OriginalPrice) / OriginalPrice) - 1) * 100))) + "%";
     }
 
+
     public static void AddMultipleProductInCart(final Session session, final Activity activity, HashMap<String, String> map) {
+        try {
+            if (map.size() > 0) {
+                String ids = map.keySet().toString().replace("[", "").replace("]", "").replace(" ", "");
+                String qty = map.values().toString().replace("[", "").replace("]", "").replace(" ", "");
+
+                Map<String, String> params = new HashMap<>();
+                params.put(Constant.ADD_MULTIPLE_ITEMS, Constant.GetVal);
+                params.put(Constant.USER_ID, session.getData(Constant.ID));
+                params.put(Constant.PRODUCT_VARIANT_ID, ids);
+                params.put(Constant.QTY, qty);
+                ApiConfig.RequestToVolley((result, response) -> {
+                    if (result) {
+                        getCartItemCount(activity, session);
+                    }
+                }, activity, Constant.CART_URL, params, false);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void AddMultipleProductInSaveForLater(final Session session, final Activity activity, HashMap<String, String> map) {
         if (map.size() > 0) {
             String ids = map.keySet().toString().replace("[", "").replace("]", "").replace(" ", "");
             String qty = map.values().toString().replace("[", "").replace("]", "").replace(" ", "");
 
             Map<String, String> params = new HashMap<>();
-            params.put(Constant.ADD_MULTIPLE_ITEMS, Constant.GetVal);
+            params.put(Constant.SAVE_FOR_LATER_ITEMS, Constant.GetVal);
             params.put(Constant.USER_ID, session.getData(Constant.ID));
             params.put(Constant.PRODUCT_VARIANT_ID, ids);
             params.put(Constant.QTY, qty);
 
-            ApiConfig.RequestToVolley(new VolleyCallback() {
-                @Override
-                public void onSuccess(boolean result, String response) {
-                    if (result) {
-                        getCartItemCount(activity, session);
-                    }
+            ApiConfig.RequestToVolley((result, response) -> {
+                if (result) {
+                    getCartItemCount(activity, session);
                 }
             }, activity, Constant.CART_URL, params, false);
         }
     }
 
-    public static void addMarkers(int currentPage, ArrayList<Slider> imglist, LinearLayout
-            mMarkersLayout, Context context) {
+    public static void addMarkers(int currentPage, ArrayList<Slider> imageList, LinearLayout mMarkersLayout, Context context) {
 
         if (context != null) {
-            TextView[] markers = new TextView[imglist.size()];
+            TextView[] markers = new TextView[imageList.size()];
 
             mMarkersLayout.removeAllViews();
 
@@ -629,18 +591,18 @@ public class ApiConfig extends Application {
                 markers[i] = new TextView(context);
                 markers[i].setText(Html.fromHtml("&#8226;"));
                 markers[i].setTextSize(35);
-                markers[i].setTextColor(context.getResources().getColor(R.color.overlay_white));
+                markers[i].setTextColor(ContextCompat.getColor(context, R.color.gray));
                 mMarkersLayout.addView(markers[i]);
             }
             if (markers.length > 0)
-                markers[currentPage].setTextColor(context.getResources().getColor(R.color.colorPrimary));
+                markers[currentPage].setTextColor(ContextCompat.getColor(context, R.color.colorPrimary));
         }
     }
 
     public static Drawable buildCounterDrawable(int count, Activity activity) {
         LayoutInflater inflater = LayoutInflater.from(activity);
-        View view = inflater.inflate(R.layout.counter_menuitem_layout, null);
-        TextView textView = view.findViewById(R.id.count);
+        @SuppressLint("InflateParams") View view = inflater.inflate(R.layout.counter_menuitem_layout, null);
+        TextView textView = view.findViewById(R.id.tvCounter);
         RelativeLayout lytCount = view.findViewById(R.id.lytCount);
         if (count == 0) {
             lytCount.setVisibility(View.GONE);
@@ -664,55 +626,49 @@ public class ApiConfig extends Application {
         Map<String, String> params = new HashMap<>();
         params.put(Constant.SETTINGS, Constant.GetVal);
         params.put(Constant.GET_TIMEZONE, Constant.GetVal);
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            JSONObject object = objectbject.getJSONObject(Constant.SETTINGS);
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        JSONObject object = jsonObject.getJSONObject(Constant.SETTINGS);
 
-                            session.setData(Constant.minimum_version_required, object.getString(Constant.minimum_version_required));
-                            session.setData(Constant.is_version_system_on, object.getString(Constant.is_version_system_on));
+                        session.setData(Constant.minimum_version_required, object.getString(Constant.minimum_version_required));
+                        session.setData(Constant.is_version_system_on, object.getString(Constant.is_version_system_on));
 
-                            session.setData(Constant.currency, object.getString(Constant.currency));
+                        session.setData(Constant.currency, object.getString(Constant.currency));
+                        session.setData(Constant.current_date, object.getString(Constant.current_date));
 
-                            session.setData(Constant.min_order_amount, object.getString(Constant.min_order_amount));
-                            session.setData(Constant.max_cart_items_count, object.getString(Constant.max_cart_items_count));
-                            session.setData(Constant.area_wise_delivery_charge, object.getString(Constant.area_wise_delivery_charge));
+                        session.setData(Constant.min_order_amount, object.getString(Constant.min_order_amount));
+                        session.setData(Constant.max_cart_items_count, object.getString(Constant.max_cart_items_count));
+                        session.setData(Constant.area_wise_delivery_charge, object.getString(Constant.area_wise_delivery_charge));
 
-                            session.setData(Constant.is_refer_earn_on, object.getString(Constant.is_refer_earn_on));
-                            session.setData(Constant.refer_earn_bonus, object.getString(Constant.refer_earn_bonus));
-                            session.setData(Constant.refer_earn_bonus, object.getString(Constant.refer_earn_bonus));
-                            session.setData(Constant.refer_earn_method, object.getString(Constant.refer_earn_method));
-                            session.setData(Constant.max_refer_earn_amount, object.getString(Constant.max_refer_earn_amount));
+                        session.setData(Constant.is_refer_earn_on, object.getString(Constant.is_refer_earn_on));
+                        session.setData(Constant.refer_earn_bonus, object.getString(Constant.refer_earn_bonus));
+                        session.setData(Constant.refer_earn_bonus, object.getString(Constant.refer_earn_bonus));
+                        session.setData(Constant.refer_earn_method, object.getString(Constant.refer_earn_method));
+                        session.setData(Constant.max_refer_earn_amount, object.getString(Constant.max_refer_earn_amount));
 
-                            session.setData(Constant.max_product_return_days, object.getString(Constant.max_product_return_days));
-                            session.setData(Constant.user_wallet_refill_limit, object.getString(Constant.user_wallet_refill_limit));
-                            session.setData(Constant.min_refer_earn_order_amount, object.getString(Constant.min_refer_earn_order_amount));
+                        session.setData(Constant.max_product_return_days, object.getString(Constant.max_product_return_days));
+                        session.setData(Constant.user_wallet_refill_limit, object.getString(Constant.user_wallet_refill_limit));
+                        session.setData(Constant.min_refer_earn_order_amount, object.getString(Constant.min_refer_earn_order_amount));
 
-                            session.setData(Constant.ratings, object.getString(Constant.ratings));
+                        session.setData(Constant.ratings, object.getString(Constant.ratings));
 
-                            if (DrawerActivity.tvWallet != null) {
-                                DrawerActivity.tvWallet.setText(activity.getResources().getString(R.string.wallet_balance) + "\t:\t" + session.getData(Constant.currency) + Constant.WALLET_BALANCE);
+                        String versionName;
+                        try {
+                            PackageInfo packageInfo = activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0);
+                            versionName = packageInfo.versionName;
+                            if (ApiConfig.compareVersion(versionName, session.getData(Constant.minimum_version_required)) < 0) {
+                                ApiConfig.OpenBottomDialog(activity);
                             }
-                            String versionName = "";
-                            try {
-                                PackageInfo packageInfo = activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0);
-                                versionName = packageInfo.versionName;
-                                if (ApiConfig.compareVersion(versionName, session.getData(Constant.minimum_version_required)) < 0) {
-                                    ApiConfig.OpenBottomDialog(activity);
-                                }
-                            } catch (PackageManager.NameNotFoundException e) {
-                                e.printStackTrace();
-                            }
+                        } catch (PackageManager.NameNotFoundException e) {
+                            e.printStackTrace();
                         }
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
                     }
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         }, activity, Constant.SETTING_URL, params, false);
@@ -720,7 +676,7 @@ public class ApiConfig extends Application {
 
     public static void OpenBottomDialog(final Activity activity) {
         try {
-            View sheetView = activity.getLayoutInflater().inflate(R.layout.dialog_update_app, null);
+            @SuppressLint("InflateParams") View sheetView = activity.getLayoutInflater().inflate(R.layout.dialog_update_app, null);
             ViewGroup parentViewGroup = (ViewGroup) sheetView.getParent();
             if (parentViewGroup != null) {
                 parentViewGroup.removeAllViews();
@@ -734,41 +690,30 @@ public class ApiConfig extends Application {
 
             mBottomSheetDialog.getWindow().setLayout(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
 
-            ImageView imgclose = sheetView.findViewById(R.id.imgclose);
+            ImageView imgClose = sheetView.findViewById(R.id.imgClose);
             Button btnNotNow = sheetView.findViewById(R.id.btnNotNow);
-            Button btnUpadateNow = sheetView.findViewById(R.id.btnUpdateNow);
+            Button btnUpdateNow = sheetView.findViewById(R.id.btnUpdateNow);
             if (new Session(activity).getData(Constant.is_version_system_on).equals("0")) {
                 btnNotNow.setVisibility(View.VISIBLE);
-                imgclose.setVisibility(View.VISIBLE);
+                imgClose.setVisibility(View.VISIBLE);
                 mBottomSheetDialog.setCancelable(true);
             } else {
                 mBottomSheetDialog.setCancelable(false);
             }
 
 
-            imgclose.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mBottomSheetDialog.isShowing())
-                        new Session(activity).setBoolean("update_skip", true);
-                    mBottomSheetDialog.dismiss();
-                }
-            });
-            btnNotNow.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
+            imgClose.setOnClickListener(v -> {
+                if (mBottomSheetDialog.isShowing())
                     new Session(activity).setBoolean("update_skip", true);
-                    if (mBottomSheetDialog.isShowing())
-                        mBottomSheetDialog.dismiss();
-                }
+                mBottomSheetDialog.dismiss();
+            });
+            btnNotNow.setOnClickListener(v -> {
+                new Session(activity).setBoolean("update_skip", true);
+                if (mBottomSheetDialog.isShowing())
+                    mBottomSheetDialog.dismiss();
             });
 
-            btnUpadateNow.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Constant.PLAY_STORE_LINK + activity.getPackageName())));
-                }
-            });
+            btnUpdateNow.setOnClickListener(view -> activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Constant.PLAY_STORE_LINK + activity.getPackageName()))));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -776,34 +721,29 @@ public class ApiConfig extends Application {
 
     public static void getWalletBalance(final Activity activity, Session session) {
         try {
-            Map<String, String> params = new HashMap<>();
-            params.put(Constant.GET_USER_DATA, Constant.GetVal);
-            params.put(Constant.USER_ID, session.getData(Constant.ID));
-            ApiConfig.RequestToVolley((result, response) -> {
-                if (result) {
-                    try {
-                        JSONObject object = new JSONObject(response);
-                        if (!object.getBoolean(Constant.ERROR)) {
-                            Constant.WALLET_BALANCE = Double.parseDouble(object.getString(Constant.KEY_BALANCE));
-                            DrawerActivity.tvWallet.setText(activity.getResources().getString(R.string.wallet_balance) + "\t:\t" + session.getData(Constant.currency) + Constant.WALLET_BALANCE);
+            if (session.getBoolean(Constant.IS_USER_LOGIN)) {
+                Map<String, String> params = new HashMap<>();
+                params.put(Constant.GET_USER_DATA, Constant.GetVal);
+                params.put(Constant.USER_ID, session.getData(Constant.ID));
+                ApiConfig.RequestToVolley((result, response) -> {
+                    if (result) {
+                        try {
+                            JSONObject object = new JSONObject(response);
+                            if (!object.getBoolean(Constant.ERROR)) {
+                                Constant.WALLET_BALANCE = Double.parseDouble(object.getString(Constant.KEY_BALANCE));
+                                session.setData(Constant.STATUS, object.getString(Constant.STATUS));
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
                         }
-                    } catch (JSONException e) {
-
                     }
-                }
-            }, activity, Constant.USER_DATA_URL, params, false);
+                }, activity, Constant.USER_DATA_URL, params, false);
+            }
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
-    public static void clearFCM(Activity activity, Session session) {
-        Map<String, String> params = new HashMap<>();
-        params.put(Constant.REMOVE_FCM_ID, Constant.GetVal);
-        params.put(Constant.USER_ID, session.getData(Constant.ID));
-        ApiConfig.RequestToVolley((result, response) -> {
-        }, activity, Constant.REMOVE_FCM_URL, params, false);
-    }
 
     public static String getAddress(double lat, double lng, Activity activity) {
         Geocoder geocoder;
@@ -860,7 +800,7 @@ public class ApiConfig extends Application {
             } else {
                 try {
                     if (!isDialogOpen) {
-                        View sheetView = activity.getLayoutInflater().inflate(R.layout.dialog_no_internet, null);
+                        @SuppressLint("InflateParams") View sheetView = activity.getLayoutInflater().inflate(R.layout.dialog_no_internet, null);
                         ViewGroup parentViewGroup = (ViewGroup) sheetView.getParent();
                         if (parentViewGroup != null) {
                             parentViewGroup.removeAllViews();
@@ -874,22 +814,20 @@ public class ApiConfig extends Application {
                         Button btnRetry = sheetView.findViewById(R.id.btnRetry);
                         mBottomSheetDialog.setCancelable(false);
 
-                        btnRetry.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                if (isConnected(activity)) {
-                                    isDialogOpen = false;
-                                    mBottomSheetDialog.dismiss();
-                                }
+                        btnRetry.setOnClickListener(view -> {
+                            if (isConnected(activity)) {
+                                isDialogOpen = false;
+                                mBottomSheetDialog.dismiss();
                             }
                         });
                     }
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    e.printStackTrace();
 
                 }
             }
-        } catch (Exception ignored) {
-
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return check;
     }
@@ -899,55 +837,24 @@ public class ApiConfig extends Application {
         ArrayList<Product> productArrayList = new ArrayList<>();
         try {
             for (int i = 0; i < jsonArray.length(); i++) {
-                try {
-                    JSONObject jsonObject = jsonArray.getJSONObject(i);
-                    ArrayList<PriceVariation> priceVariations = new ArrayList<>();
-                    JSONArray pricearray = jsonObject.getJSONArray(Constant.VARIANT);
-
-                    for (int j = 0; j < pricearray.length(); j++) {
-                        JSONObject obj = pricearray.getJSONObject(j);
-                        String discountpercent = "0";
-                        if (!obj.getString(Constant.DISCOUNTED_PRICE).equals("0")) {
-                            discountpercent = ApiConfig.GetDiscount(obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE));
-                        }
-                        priceVariations.add(new PriceVariation(obj.getString(Constant.CART_ITEM_COUNT), obj.getString(Constant.ID), obj.getString(Constant.PRODUCT_ID), obj.getString(Constant.TYPE), obj.getString(Constant.MEASUREMENT), obj.getString(Constant.MEASUREMENT_UNIT_ID), obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE), obj.getString(Constant.SERVE_FOR), obj.getString(Constant.STOCK), obj.getString(Constant.STOCK_UNIT_ID), obj.getString(Constant.MEASUREMENT_UNIT_NAME), obj.getString(Constant.STOCK_UNIT_NAME), discountpercent));
-                    }
-                    productArrayList.add(new Product(jsonObject.getString(Constant.TAX_PERCENT), jsonObject.getString(Constant.ROW_ORDER), jsonObject.getString(Constant.TILL_STATUS), jsonObject.getString(Constant.CANCELLABLE_STATUS), jsonObject.getString(Constant.MANUFACTURER), jsonObject.getString(Constant.MADE_IN), jsonObject.getString(Constant.RETURN_STATUS), jsonObject.getString(Constant.ID), jsonObject.getString(Constant.NAME), jsonObject.getString(Constant.SLUG), jsonObject.getString(Constant.SUC_CATE_ID), jsonObject.getString(Constant.IMAGE), jsonObject.getJSONArray(Constant.OTHER_IMAGES), jsonObject.getString(Constant.DESCRIPTION), jsonObject.getString(Constant.STATUS), jsonObject.getString(Constant.DATE_ADDED), jsonObject.getBoolean(Constant.IS_FAVORITE), jsonObject.getString(Constant.CATEGORY_ID), priceVariations, jsonObject.getString(Constant.INDICATOR), jsonObject.getString(Constant.ratings), jsonObject.getString(Constant.number_of_ratings)));
-                } catch (JSONException e) {
-
-                }
+                Product product = new Gson().fromJson(jsonArray.getJSONObject(i).toString(), Product.class);
+                productArrayList.add(product);
             }
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
         return productArrayList;
-
     }
 
-    public static ArrayList<Favorite> GetFavoriteProductList(JSONArray jsonArray) {
-        ArrayList<Favorite> productArrayList = new ArrayList<>();
+    public static ArrayList<Product> GetFavoriteProductList(JSONArray jsonArray) {
+        ArrayList<Product> productArrayList = new ArrayList<>();
         try {
             for (int i = 0; i < jsonArray.length(); i++) {
-                try {
-                    JSONObject jsonObject = jsonArray.getJSONObject(i);
-                    ArrayList<PriceVariation> priceVariations = new ArrayList<>();
-                    JSONArray pricearray = jsonObject.getJSONArray(Constant.VARIANT);
-
-                    for (int j = 0; j < pricearray.length(); j++) {
-                        JSONObject obj = pricearray.getJSONObject(j);
-                        String discountpercent = "0";
-                        if (!obj.getString(Constant.DISCOUNTED_PRICE).equals("0")) {
-                            discountpercent = ApiConfig.GetDiscount(obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE));
-                        }
-                        priceVariations.add(new PriceVariation(obj.getString(Constant.CART_ITEM_COUNT), obj.getString(Constant.ID), obj.getString(Constant.PRODUCT_ID), obj.getString(Constant.TYPE), obj.getString(Constant.MEASUREMENT), obj.getString(Constant.MEASUREMENT_UNIT_ID), obj.getString(Constant.PRICE), obj.getString(Constant.DISCOUNTED_PRICE), obj.getString(Constant.SERVE_FOR), obj.getString(Constant.STOCK), obj.getString(Constant.STOCK_UNIT_ID), obj.getString(Constant.MEASUREMENT_UNIT_NAME), obj.getString(Constant.STOCK_UNIT_NAME), discountpercent));
-                    }
-                    productArrayList.add(new Favorite(jsonObject.getString(Constant.PRODUCT_ID), jsonObject.getString(Constant.CANCELLABLE_STATUS), jsonObject.getString(Constant.TILL_STATUS), jsonObject.getString(Constant.MANUFACTURER), jsonObject.getString(Constant.MADE_IN), jsonObject.getString(Constant.RETURN_STATUS), jsonObject.getString(Constant.ID), jsonObject.getString(Constant.NAME), jsonObject.getString(Constant.SLUG), jsonObject.getString(Constant.SUC_CATE_ID), jsonObject.getString(Constant.IMAGE), jsonObject.getJSONArray(Constant.OTHER_IMAGES), jsonObject.getString(Constant.DESCRIPTION), jsonObject.getString(Constant.STATUS), jsonObject.getString(Constant.DATE_ADDED), jsonObject.getBoolean(Constant.IS_FAVORITE), jsonObject.getString(Constant.CATEGORY_ID), priceVariations, jsonObject.getString(Constant.INDICATOR), jsonObject.getString(Constant.ratings), jsonObject.getString(Constant.number_of_ratings)));
-                } catch (JSONException e) {
-
-                }
+                Product product = new Gson().fromJson(jsonArray.getJSONObject(i).toString(), Product.class);
+                productArrayList.add(product);
             }
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
         return productArrayList;
     }
@@ -955,8 +862,6 @@ public class ApiConfig extends Application {
     public static void SetAppEnvironment(Activity activity) {
         if (Constant.PAYUMONEY_MODE.equals("production")) {
             appEnvironment = AppEnvironment.PRODUCTION;
-        } else if (Constant.PAYUMONEY_MODE.equals("sandbox")) {
-            appEnvironment = AppEnvironment.SANDBOX;
         } else {
             appEnvironment = AppEnvironment.SANDBOX;
         }

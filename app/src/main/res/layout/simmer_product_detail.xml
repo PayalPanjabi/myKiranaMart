@@ -31,7 +31,8 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/_5sdp"
             android:layout_marginEnd="@dimen/_5sdp"
-            android:weightSum="3">
+            android:weightSum="3"
+            android:baselineAligned="false">
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -131,11 +132,11 @@
                 android:layout_height="@dimen/_15sdp"
                 android:layout_alignParentStart="true"
                 android:layout_marginEnd="@dimen/_20sdp"
-                android:layout_toStartOf="@id/txt"
+                android:layout_toStartOf="@id/_txt"
                 android:background="@color/background" />
 
             <View
-                android:id="@+id/txt"
+                android:id="@+id/_txt"
                 android:layout_width="@dimen/_35sdp"
                 android:layout_height="@dimen/_15sdp"
                 android:layout_alignParentEnd="true"
@@ -151,13 +152,14 @@
             android:layout_marginTop="5dp">
 
             <LinearLayout
-                android:id="@+id/lyt"
+                android:id="@+id/_lyt"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/_15sdp"
                 android:layout_marginTop="@dimen/_10sdp"
                 android:layout_marginBottom="@dimen/_10sdp"
                 android:orientation="horizontal"
-                android:weightSum="2">
+                android:weightSum="2"
+                android:baselineAligned="false">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -188,19 +190,20 @@
             </LinearLayout>
 
             <View
-                android:id="@+id/view"
+                android:id="@+id/_view"
                 android:layout_width="match_parent"
                 android:layout_height="3dp"
-                android:layout_below="@id/lyt"
-                android:background="@color/bggray" />
+                android:layout_below="@id/_lyt"
+                android:background="@color/bg_gray" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/view"
+                android:layout_below="@id/_view"
                 android:layout_marginTop="@dimen/dimen_5dp"
                 android:orientation="horizontal"
-                android:weightSum="2">
+                android:weightSum="2"
+                android:baselineAligned="false">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -252,7 +255,7 @@
             android:layout_width="match_parent"
             android:layout_height="3dp"
             android:layout_marginBottom="@dimen/_5sdp"
-            android:background="@color/bggray" />
+            android:background="@color/bg_gray" />
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -300,7 +303,7 @@
             android:layout_width="match_parent"
             android:layout_height="3dp"
             android:layout_marginTop="@dimen/_5sdp"
-            android:background="@color/bggray" />
+            android:background="@color/bg_gray" />
 
 
         <View

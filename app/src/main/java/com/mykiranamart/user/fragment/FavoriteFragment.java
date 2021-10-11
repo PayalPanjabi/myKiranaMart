@@ -1,15 +1,23 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+import static com.mykiranamart.user.helper.ApiConfig.GetSettings;
+
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -28,30 +36,25 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.mykiranamart.user.R;
-import com.mykiranamart.user.adapter.FavoriteLoadMoreAdapter;
-import com.mykiranamart.user.adapter.OfflineFavoriteAdapter;
+import com.mykiranamart.user.adapter.ProductLoadMoreAdapter;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.DatabaseHelper;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
-import com.mykiranamart.user.model.Favorite;
 import com.mykiranamart.user.model.Product;
 
-import static android.content.Context.INPUT_METHOD_SERVICE;
-import static com.mykiranamart.user.helper.ApiConfig.GetSettings;
 
-
+@SuppressLint("NotifyDataSetChanged")
 public class FavoriteFragment extends Fragment {
-    public static ArrayList<Favorite> favoriteArrayList;
     public static ArrayList<Product> productArrayList;
-    public static FavoriteLoadMoreAdapter favoriteLoadMoreAdapter;
-    public static OfflineFavoriteAdapter offlineFavoriteAdapter;
+    @SuppressLint("StaticFieldLeak")
+    public static ProductLoadMoreAdapter productLoadMoreAdapter;
     public static RecyclerView recyclerView;
+    @SuppressLint("StaticFieldLeak")
     public static RelativeLayout tvAlert;
     View root;
     Session session;
-    int total;
+    int total = 0;
     NestedScrollView nestedScrollView;
     Activity activity;
     boolean isLogin;
@@ -60,8 +63,10 @@ public class FavoriteFragment extends Fragment {
     SwipeRefreshLayout swipeLayout;
     boolean isLoadMore = false;
     boolean isGrid = false;
+    LinearLayout lytList, lytGrid;
     int resource;
     private ShimmerFrameLayout mShimmerViewContainer;
+    String url;
 
     @Override
     public View onCreateView(final LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -70,8 +75,23 @@ public class FavoriteFragment extends Fragment {
         setHasOptionsMenu(true);
 
         activity = getActivity();
-
         session = new Session(activity);
+        isLogin = session.getBoolean(Constant.IS_USER_LOGIN);
+        databaseHelper = new DatabaseHelper(activity);
+
+
+        swipeLayout = root.findViewById(R.id.swipeLayout);
+        tvAlert = root.findViewById(R.id.tvAlert);
+        lytGrid = root.findViewById(R.id.lytGrid);
+        lytList = root.findViewById(R.id.lytList);
+        nestedScrollView = root.findViewById(R.id.nestedScrollView);
+        mShimmerViewContainer = root.findViewById(R.id.mShimmerViewContainer);
+
+        if (isLogin) {
+            url = Constant.GET_FAVORITES_URL;
+        } else {
+            url = Constant.GET_OFFLINE_FAVORITES_URL;
+        }
 
         if (session.getGrid("grid")) {
             resource = R.layout.lyt_item_grid;
@@ -79,7 +99,6 @@ public class FavoriteFragment extends Fragment {
 
             recyclerView = root.findViewById(R.id.recyclerView);
             recyclerView.setLayoutManager(new GridLayoutManager(activity, 2));
-
         } else {
             resource = R.layout.lyt_item_list;
             isGrid = false;
@@ -88,48 +107,26 @@ public class FavoriteFragment extends Fragment {
             recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         }
 
-        isLogin = session.getBoolean(Constant.IS_USER_LOGIN);
-        databaseHelper = new DatabaseHelper(activity);
-
-        swipeLayout = root.findViewById(R.id.swipeLayout);
-
-        tvAlert = root.findViewById(R.id.tvAlert);
-        nestedScrollView = root.findViewById(R.id.nestedScrollView);
-        mShimmerViewContainer = root.findViewById(R.id.mShimmerViewContainer);
-
-
         GetSettings(activity);
 
         if (ApiConfig.isConnected(activity)) {
-            if (isLogin) {
-                ApiConfig.getWalletBalance(activity, new Session(activity));
-                GetData();
-            } else {
-                GetOfflineData();
-            }
+            GetData();
         }
 
         swipeLayout.setColorSchemeResources(R.color.colorPrimary);
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                if (ApiConfig.isConnected(activity)) {
-
-                    if (new Session(activity).getBoolean(Constant.IS_USER_LOGIN)) {
-                        ApiConfig.getWalletBalance(activity, new Session(activity));
-                    }
-                    if (isLogin) {
-                        if (Constant.CartValues.size() > 0) {
-                            ApiConfig.AddMultipleProductInCart(session, activity, Constant.CartValues);
-                        }
-                        offset = 0;
-                        GetData();
-                    } else {
-                        GetOfflineData();
+        swipeLayout.setOnRefreshListener(() -> {
+            if (ApiConfig.isConnected(activity)) {
+                offset = 0;
+                total = 0;
+                ApiConfig.getWalletBalance(activity, new Session(activity));
+                if (isLogin) {
+                    if (Constant.CartValues.size() > 0) {
+                        ApiConfig.AddMultipleProductInCart(session, activity, Constant.CartValues);
                     }
                 }
-                swipeLayout.setRefreshing(false);
+                GetData();
             }
+            swipeLayout.setRefreshing(false);
         });
 
         return root;
@@ -140,169 +137,131 @@ public class FavoriteFragment extends Fragment {
         mShimmerViewContainer.setVisibility(View.VISIBLE);
         mShimmerViewContainer.startShimmer();
         Map<String, String> params = new HashMap<>();
-        params.put(Constant.GET_FAVORITES, Constant.GetVal);
-        params.put(Constant.USER_ID, session.getData(Constant.ID));
-        params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
-        params.put(Constant.OFFSET, offset + "");
-
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-
-                if (result) {
-                    try {
-                        JSONObject objectbject = new JSONObject(response);
-                        if (!objectbject.getBoolean(Constant.ERROR)) {
-                            total = Integer.parseInt(objectbject.getString(Constant.TOTAL));
-                            if (offset == 0) {
-                                favoriteArrayList = new ArrayList<>();
-                                recyclerView.setVisibility(View.VISIBLE);
-                                tvAlert.setVisibility(View.GONE);
-                            }
-                            JSONObject object = new JSONObject(response);
-                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-                            favoriteArrayList.addAll(ApiConfig.GetFavoriteProductList(jsonArray));
-                            if (offset == 0) {
-                                favoriteLoadMoreAdapter = new FavoriteLoadMoreAdapter(getContext(), favoriteArrayList, resource);
-                                favoriteLoadMoreAdapter.setHasStableIds(true);
-                                recyclerView.setAdapter(favoriteLoadMoreAdapter);
-                                mShimmerViewContainer.stopShimmer();
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                recyclerView.setVisibility(View.VISIBLE);
-                                nestedScrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
-                                    @Override
-                                    public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-
-                                        // if (diff == 0) {
-                                        if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
-                                            LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                                            if (favoriteArrayList.size() < total) {
-                                                if (!isLoadMore) {
-                                                    if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == favoriteArrayList.size() - 1) {
-                                                        //bottom of list!
-                                                        favoriteArrayList.add(null);
-                                                        favoriteLoadMoreAdapter.notifyItemInserted(favoriteArrayList.size() - 1);
-
-                                                        offset = offset + Constant.LOAD_ITEM_LIMIT;
-                                                        Map<String, String> params = new HashMap<>();
-                                                        params.put(Constant.GET_FAVORITES, Constant.GetVal);
-                                                        params.put(Constant.USER_ID, session.getData(Constant.ID));
-                                                        params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
-                                                        params.put(Constant.OFFSET, offset + "");
-
-                                                        ApiConfig.RequestToVolley(new VolleyCallback() {
-                                                            @Override
-                                                            public void onSuccess(boolean result, String response) {
-
-                                                                if (result) {
-                                                                    try {
-                                                                        JSONObject objectbject = new JSONObject(response);
-                                                                        if (!objectbject.getBoolean(Constant.ERROR)) {
-
-                                                                            JSONObject object = new JSONObject(response);
-                                                                            JSONArray jsonArray = object.getJSONArray(Constant.DATA);
-                                                                            favoriteArrayList.remove(favoriteArrayList.size() - 1);
-                                                                            favoriteLoadMoreAdapter.notifyItemRemoved(favoriteArrayList.size());
-
-                                                                            favoriteArrayList.addAll(ApiConfig.GetFavoriteProductList(jsonArray));
-                                                                            favoriteLoadMoreAdapter.notifyDataSetChanged();
-                                                                            favoriteLoadMoreAdapter.setLoaded();
-                                                                            isLoadMore = false;
-                                                                        }
-                                                                    } catch (JSONException e) {
-                                                                        mShimmerViewContainer.stopShimmer();
-                                                                        mShimmerViewContainer.setVisibility(View.GONE);
-                                                                        recyclerView.setVisibility(View.VISIBLE);
-                                                                    }
-                                                                }
-                                                            }
-                                                        }, activity, Constant.GET_FAVORITES_URL, params, false);
-                                                        isLoadMore = true;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                        } else {
-                            if (offset == 0) {
-                                mShimmerViewContainer.stopShimmer();
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                recyclerView.setVisibility(View.VISIBLE);
-                                recyclerView.setVisibility(View.GONE);
-                                tvAlert.setVisibility(View.VISIBLE);
-                            }
-                        }
-                    } catch (JSONException e) {
-                        mShimmerViewContainer.stopShimmer();
-                        mShimmerViewContainer.setVisibility(View.GONE);
-                        recyclerView.setVisibility(View.VISIBLE);
-                    }
-                }
-            }
-        }, activity, Constant.GET_FAVORITES_URL, params, false);
-    }
-
-
-    void GetOfflineData() {
-        recyclerView.setVisibility(View.GONE);
-        mShimmerViewContainer.setVisibility(View.VISIBLE);
-        mShimmerViewContainer.startShimmer();
-        if (databaseHelper.getFavourite().size() >= 1) {
-            Map<String, String> params = new HashMap<>();
+        if (isLogin) {
+            params.put(Constant.GET_FAVORITES, Constant.GetVal);
+            params.put(Constant.GET_ALL_PRODUCTS, Constant.GetVal);
+            params.put(Constant.USER_ID, session.getData(Constant.ID));
+            params.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
+            params.put(Constant.OFFSET, offset + "");
+        } else {
             params.put(Constant.GET_FAVORITES_OFFLINE, Constant.GetVal);
-            params.put(Constant.PRODUCT_IDs, databaseHelper.getFavourite().toString().replace("[", "").replace("]", "").replace("\"", ""));
-
-            ApiConfig.RequestToVolley(new VolleyCallback() {
-                @Override
-                public void onSuccess(boolean result, String response) {
-
-                    if (result) {
-                        try {
-                            JSONObject objectbject = new JSONObject(response);
-                            if (!objectbject.getBoolean(Constant.ERROR)) {
-                                JSONArray jsonArray = objectbject.getJSONArray(Constant.DATA);
-                                productArrayList = new ArrayList<>();
-                                recyclerView.setVisibility(View.VISIBLE);
-                                tvAlert.setVisibility(View.GONE);
-                                offlineFavoriteAdapter = new OfflineFavoriteAdapter(getContext(), productArrayList, resource);
-                                offlineFavoriteAdapter.setHasStableIds(true);
-                                productArrayList.addAll(ApiConfig.GetProductList(jsonArray));
-                                recyclerView.setAdapter(offlineFavoriteAdapter);
-                                mShimmerViewContainer.stopShimmer();
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                recyclerView.setVisibility(View.VISIBLE);
-                            } else {
-                                mShimmerViewContainer.stopShimmer();
-                                mShimmerViewContainer.setVisibility(View.GONE);
-                                recyclerView.setVisibility(View.VISIBLE);
-                                recyclerView.setVisibility(View.GONE);
-                                tvAlert.setVisibility(View.VISIBLE);
-                            }
-                        } catch (JSONException e) {
+            params.put(Constant.PRODUCT_IDs, String.valueOf(databaseHelper.getFavorite()).replace("[", "").replace("]", ""));
+        }
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        if (isLogin) {
+                            total = Integer.parseInt(jsonObject.getString(Constant.TOTAL));
+                        }
+                        if (offset == 0) {
+                            productArrayList = new ArrayList<>();
+                            recyclerView.setVisibility(View.VISIBLE);
+                            tvAlert.setVisibility(View.GONE);
+                        }
+                        JSONObject object = new JSONObject(response);
+                        JSONArray jsonArray = object.getJSONArray(Constant.DATA);
+                        productArrayList.addAll(ApiConfig.GetFavoriteProductList(jsonArray));
+                        if (offset == 0) {
+                            productLoadMoreAdapter = new ProductLoadMoreAdapter(activity, productArrayList, resource, "favorite");
+                            recyclerView.setAdapter(productLoadMoreAdapter);
                             mShimmerViewContainer.stopShimmer();
                             mShimmerViewContainer.setVisibility(View.GONE);
                             recyclerView.setVisibility(View.VISIBLE);
-                        }
-                    }
-                }
-            }, activity, Constant.GET_OFFLINE_FAVORITES_URL, params, false);
-        } else {
-            recyclerView.setVisibility(View.GONE);
-            tvAlert.setVisibility(View.VISIBLE);
-            mShimmerViewContainer.stopShimmer();
-            mShimmerViewContainer.setVisibility(View.GONE);
-            recyclerView.setVisibility(View.VISIBLE);
-        }
+                            nestedScrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
 
+                                // if (diff == 0) {
+                                if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
+                                    LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+                                    if (productArrayList.size() < total) {
+                                        if (!isLoadMore) {
+                                            if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == productArrayList.size() - 1) {
+                                                //bottom of list!
+                                                productArrayList.add(null);
+                                                productLoadMoreAdapter.notifyItemInserted(productArrayList.size() - 1);
+
+                                                offset = offset + Constant.LOAD_ITEM_LIMIT;
+                                                Map<String, String> params1 = new HashMap<>();
+                                                if (isLogin) {
+                                                    params1.put(Constant.GET_FAVORITES, Constant.GetVal);
+                                                    params1.put(Constant.USER_ID, session.getData(Constant.ID));
+                                                    params1.put(Constant.LIMIT, "" + Constant.LOAD_ITEM_LIMIT);
+                                                    params1.put(Constant.OFFSET, offset + "");
+                                                } else {
+                                                    params1.put(Constant.GET_FAVORITES_OFFLINE, Constant.GetVal);
+                                                    params1.put(Constant.PRODUCT_IDs, String.valueOf(databaseHelper.getFavorite()).replace("[", "").replace("]", ""));
+                                                }
+
+                                                ApiConfig.RequestToVolley((result1, response1) -> {
+                                                    productArrayList.remove(productArrayList.size() - 1);
+                                                    productLoadMoreAdapter.notifyItemRemoved(productArrayList.size());
+
+                                                    if (result1) {
+                                                        try {
+                                                            JSONObject jsonObject1 = new JSONObject(response1);
+                                                            if (!jsonObject1.getBoolean(Constant.ERROR)) {
+
+                                                                JSONObject object1 = new JSONObject(response1);
+                                                                JSONArray jsonArray1 = object1.getJSONArray(Constant.DATA);
+                                                                productArrayList.addAll(ApiConfig.GetFavoriteProductList(jsonArray1));
+                                                                productLoadMoreAdapter.notifyDataSetChanged();
+                                                                isLoadMore = false;
+                                                            }
+                                                        } catch (JSONException e) {
+                                                            mShimmerViewContainer.stopShimmer();
+                                                            mShimmerViewContainer.setVisibility(View.GONE);
+                                                            recyclerView.setVisibility(View.VISIBLE);
+                                                        }
+                                                    } else {
+                                                        isLoadMore = false;
+                                                        productLoadMoreAdapter.notifyDataSetChanged();
+                                                        mShimmerViewContainer.stopShimmer();
+                                                        mShimmerViewContainer.setVisibility(View.GONE);
+                                                        recyclerView.setVisibility(View.VISIBLE);
+                                                        recyclerView.setVisibility(View.GONE);
+                                                        tvAlert.setVisibility(View.VISIBLE);
+                                                    }
+                                                }, activity, url, params1, false);
+                                                isLoadMore = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    } else {
+                        mShimmerViewContainer.stopShimmer();
+                        mShimmerViewContainer.setVisibility(View.GONE);
+                        recyclerView.setVisibility(View.VISIBLE);
+                        recyclerView.setVisibility(View.GONE);
+                        tvAlert.setVisibility(View.VISIBLE);
+
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    mShimmerViewContainer.stopShimmer();
+                    mShimmerViewContainer.setVisibility(View.GONE);
+                    recyclerView.setVisibility(View.VISIBLE);
+                    recyclerView.setVisibility(View.GONE);
+                    tvAlert.setVisibility(View.VISIBLE);
+                }
+            } else {
+                mShimmerViewContainer.stopShimmer();
+                mShimmerViewContainer.setVisibility(View.GONE);
+                recyclerView.setVisibility(View.VISIBLE);
+                recyclerView.setVisibility(View.GONE);
+                tvAlert.setVisibility(View.VISIBLE);
+            }
+        }, activity, url, params, false);
     }
+
 
     @Override
     public void onResume() {
         super.onResume();
         Constant.TOOLBAR_TITLE = getString(R.string.title_fav);
-        getActivity().invalidateOptionsMenu();
+        requireActivity().invalidateOptionsMenu();
         hideKeyboard();
     }
 
@@ -312,15 +271,64 @@ public class FavoriteFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
+    public void onHiddenChanged(boolean hidden) {
+        recyclerView.setVisibility(View.GONE);
+        tvAlert.setVisibility(View.GONE);
+        if (!hidden)
+            GetData();
+        super.onHiddenChanged(hidden);
+    }
+
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.toolbar_layout) {
+            if (isGrid) {
+                lytGrid.setVisibility(View.GONE);
+                lytList.setVisibility(View.VISIBLE);
+                isGrid = false;
+                recyclerView.setAdapter(null);
+                resource = R.layout.lyt_item_list;
+                recyclerView.setLayoutManager(new LinearLayoutManager(activity));
+            } else {
+                lytGrid.setVisibility(View.VISIBLE);
+                lytList.setVisibility(View.GONE);
+                isGrid = true;
+                recyclerView.setAdapter(null);
+                resource = R.layout.lyt_item_grid;
+                recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
+            }
+            session.setGrid("grid", isGrid);
+            productLoadMoreAdapter = new ProductLoadMoreAdapter(activity, productArrayList, resource, "favorite");
+            recyclerView.setAdapter(productLoadMoreAdapter);
+            productLoadMoreAdapter.notifyDataSetChanged();
+            activity.invalidateOptionsMenu();
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
-        super.onPrepareOptionsMenu(menu);
-        menu.findItem(R.id.toolbar_cart).setVisible(true);
+        activity.getMenuInflater().inflate(R.menu.main_menu, menu);
+
         menu.findItem(R.id.toolbar_sort).setVisible(false);
         menu.findItem(R.id.toolbar_search).setVisible(true);
+        menu.findItem(R.id.toolbar_cart).setIcon(ApiConfig.buildCounterDrawable(Constant.TOTAL_CART_ITEM, activity));
+        menu.findItem(R.id.toolbar_layout).setVisible(true);
+
+        Drawable myDrawable;
+        if (isGrid) {
+            myDrawable = ContextCompat.getDrawable(activity, R.drawable.ic_list_); // The ID of your drawable
+        } else {
+            myDrawable = ContextCompat.getDrawable(activity, R.drawable.ic_grid_); // The ID of your drawable.
+        }
+        menu.findItem(R.id.toolbar_layout).setIcon(myDrawable);
+
+        super.onPrepareOptionsMenu(menu);
     }
 }

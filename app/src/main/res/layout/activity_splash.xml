@@ -1,21 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_color"
-    android:fitsSystemWindows="false">
+    android:fitsSystemWindows="false"
+    tools:ignore="Overdraw">
 
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:alpha="0.75"
-        android:backgroundTint="@color/bg_color"
-        android:background="@drawable/doodles" />
+        android:background="@drawable/doodles"
+        android:backgroundTint="@color/white"
+        android:contentDescription="@string/app_name" />
 
     <ImageView
-        android:layout_width="331dp"
-        android:layout_height="206dp"
+        android:layout_width="326dp"
+        android:layout_height="211dp"
         android:layout_centerInParent="true"
+        android:contentDescription="@string/app_name"
         android:src="@drawable/logo_login" />
 
 </RelativeLayout>

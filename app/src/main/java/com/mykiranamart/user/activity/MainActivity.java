@@ -1,12 +1,13 @@
 package com.mykiranamart.user.activity;
 
-
+import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,37 +19,35 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
-import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.paytm.pgsdk.PaytmPaymentTransactionCallback;
 import com.razorpay.PaymentResultListener;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
-import me.ibrahimsn.lib.OnItemSelectedListener;
-import me.ibrahimsn.lib.SmoothBottomBar;
 import com.mykiranamart.user.R;
 import com.mykiranamart.user.fragment.AddressListFragment;
 import com.mykiranamart.user.fragment.CartFragment;
 import com.mykiranamart.user.fragment.CategoryFragment;
+import com.mykiranamart.user.fragment.DrawerFragment;
 import com.mykiranamart.user.fragment.FavoriteFragment;
 import com.mykiranamart.user.fragment.HomeFragment;
 import com.mykiranamart.user.fragment.OrderPlacedFragment;
-import com.mykiranamart.user.fragment.PaymentFragment;
 import com.mykiranamart.user.fragment.ProductDetailFragment;
-import com.mykiranamart.user.fragment.SearchFragment;
+import com.mykiranamart.user.fragment.ProductListFragment;
 import com.mykiranamart.user.fragment.SubCategoryFragment;
 import com.mykiranamart.user.fragment.TrackOrderFragment;
 import com.mykiranamart.user.fragment.TrackerDetailFragment;
@@ -58,43 +57,41 @@ import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.DatabaseHelper;
 import com.mykiranamart.user.helper.Session;
 
-
-public class MainActivity extends DrawerActivity implements PaymentResultListener {
+public class MainActivity extends AppCompatActivity implements PaymentResultListener, PaytmPaymentTransactionCallback {
 
     static final String TAG = "MAIN ACTIVITY";
+    @SuppressLint("StaticFieldLeak")
     public static Toolbar toolbar;
-    public static SmoothBottomBar bottomNavigationView;
+    public static BottomNavigationView bottomNavigationView;
     public static Fragment active;
     public static FragmentManager fm = null;
-    public static Fragment homeFragment, categoryFragment, favoriteFragment, trackOrderFragment;
-    public static boolean homeClicked = false, categoryClicked = false, favoriteClicked = false, trackingClicked = false;
+    public static Fragment homeFragment, categoryFragment, favoriteFragment, trackOrderFragment, drawerFragment;
+    public static boolean homeClicked = false, categoryClicked = false, favoriteClicked = false, drawerClicked = false;
+    @SuppressLint("StaticFieldLeak")
     public static Activity activity;
-    public static Session session;
+    public Session session;
     boolean doubleBackToExitPressedOnce = false;
     Menu menu;
     DatabaseHelper databaseHelper;
     String from;
-    CardView cardViewHamburger;
     TextView toolbarTitle;
-    ImageView imageMenu;
+    ImageView imageMenu, imageHome;
+    CardView cardViewHamburger;
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getLayoutInflater().inflate(R.layout.activity_main, frameLayout);
+        setContentView(R.layout.activity_main);
 
-        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         Objects.requireNonNull(getSupportActionBar()).setDisplayOptions(0, ActionBar.DISPLAY_SHOW_TITLE);
 
-        drawer_layout = (DrawerLayout) findViewById(R.id.drawer_layout);
-
-        ActionBarDrawerToggle actionBarDrawerToggle = new ActionBarDrawerToggle(this, drawer_layout, R.string.drawer_open, R.string.drawer_close);
-        drawer_layout.addDrawerListener(actionBarDrawerToggle);
-        cardViewHamburger = findViewById(R.id.cardViewHamburger);
         toolbarTitle = findViewById(R.id.toolbarTitle);
         imageMenu = findViewById(R.id.imageMenu);
-        actionBarDrawerToggle.syncState();
+        imageHome = findViewById(R.id.imageHome);
+        cardViewHamburger = findViewById(R.id.cardViewHamburger);
 
         activity = MainActivity.this;
         session = new Session(activity);
@@ -103,29 +100,14 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
         from = getIntent().getStringExtra(Constant.FROM);
         databaseHelper = new DatabaseHelper(activity);
 
-        drawerToggle = new ActionBarDrawerToggle
-                (
-                        activity,
-                        drawer_layout, toolbar,
-                        R.string.drawer_open,
-                        R.string.drawer_close
-                ) {
-        };
-
-        cardViewHamburger.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                drawer_layout.openDrawer(GravityCompat.START);
-            }
-        });
-
         if (session.getBoolean(Constant.IS_USER_LOGIN)) {
             ApiConfig.getCartItemCount(activity, session);
         } else {
+            session.setData(Constant.STATUS, "1");
             databaseHelper.getTotalItemOfCart(activity);
         }
 
-//        setAppLocal("en"); //Change you language code here
+        setAppLocal("en"); //Change you language code here
 
         fm = getSupportFragmentManager();
 
@@ -133,107 +115,75 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
         categoryFragment = new CategoryFragment();
         favoriteFragment = new FavoriteFragment();
         trackOrderFragment = new TrackOrderFragment();
+        drawerFragment = new DrawerFragment();
 
-        if (from.equals("tracker")) {
-            bottomNavigationView.setItemActiveIndex(3);
-            active = trackOrderFragment;
-            trackingClicked = true;
-            homeClicked = false;
-            favoriteClicked = false;
-            categoryClicked = false;
-            fm.beginTransaction().add(R.id.container, trackOrderFragment).commit();
-        } else {
-            Bundle bundle = new Bundle();
-            bottomNavigationView.setItemActiveIndex(0);
-            active = homeFragment;
-            homeClicked = true;
-            trackingClicked = false;
-            favoriteClicked = false;
-            categoryClicked = false;
-            try {
-                if (!getIntent().getStringExtra("json").isEmpty()) {
-                    bundle.putString("json", getIntent().getStringExtra("json"));
-                }
-                homeFragment.setArguments(bundle);
-                fm.beginTransaction().add(R.id.container, homeFragment).commit();
-            } catch (Exception e) {
-                fm.beginTransaction().add(R.id.container, homeFragment).commit();
+
+        Bundle bundle = new Bundle();
+        bottomNavigationView.setSelectedItemId(R.id.navMain);
+        active = homeFragment;
+        homeClicked = true;
+        drawerClicked = false;
+        favoriteClicked = false;
+        categoryClicked = false;
+        try {
+            if (!getIntent().getStringExtra("json").isEmpty()) {
+                bundle.putString("json", getIntent().getStringExtra("json"));
             }
+            homeFragment.setArguments(bundle);
+            fm.beginTransaction().add(R.id.container, homeFragment).commit();
+        } catch (Exception e) {
+            fm.beginTransaction().add(R.id.container, homeFragment).commit();
         }
 
-        bottomNavigationView.setOnItemSelectedListener(new OnItemSelectedListener() {
-            @Override
-            public boolean onItemSelect(int i) {
-
-                switch (i) {
-                    case 0:
-                        if (!homeClicked) {
-                            fm.beginTransaction().add(R.id.container, homeFragment).show(homeFragment).hide(active).commit();
-                            homeClicked = true;
-                        } else {
-                            fm.beginTransaction().show(homeFragment).hide(active).commit();
-                        }
-                        active = homeFragment;
-                        break;
-                    case 1:
-                        if (!categoryClicked) {
-                            fm.beginTransaction().add(R.id.container, categoryFragment).show(categoryFragment).hide(active).commit();
-                            categoryClicked = true;
-                        } else {
-                            fm.beginTransaction().show(categoryFragment).hide(active).commit();
-                        }
-                        active = categoryFragment;
-                        break;
-                    case 2:
-                        if (!favoriteClicked) {
-                            fm.beginTransaction().add(R.id.container, favoriteFragment).show(favoriteFragment).hide(active).commit();
-                            favoriteClicked = true;
-                        } else {
-                            fm.beginTransaction().show(favoriteFragment).hide(active).commit();
-                        }
-                        active = favoriteFragment;
-                        break;
-
-                    case 3:
-                        if (session.getBoolean(Constant.IS_USER_LOGIN)) {
-                            if (!trackingClicked) {
-                                fm.beginTransaction().add(R.id.container, trackOrderFragment).show(trackOrderFragment).hide(active).commit();
-                                trackingClicked = true;
+        bottomNavigationView.setOnItemSelectedListener(item -> {
+            {
+                switch (item.getItemId()) {
+                    case R.id.navMain:
+                        if (active != homeFragment) {
+                            bottomNavigationView.getMenu().findItem(item.getItemId()).setChecked(true);
+                            if (!homeClicked) {
+                                fm.beginTransaction().add(R.id.container, homeFragment).show(homeFragment).hide(active).commit();
+                                homeClicked = true;
                             } else {
-                                fm.beginTransaction().show(trackOrderFragment).hide(active).commit();
+                                fm.beginTransaction().show(homeFragment).hide(active).commit();
                             }
-                            active = trackOrderFragment;
-                        } else {
-                            final AlertDialog.Builder alertDialog = new AlertDialog.Builder(activity);
-                            // Setting Dialog Message
-                            alertDialog.setTitle(getString(R.string.login));
-                            alertDialog.setMessage(getString(R.string.login_msg));
-                            alertDialog.setCancelable(false);
-                            final AlertDialog alertDialog1 = alertDialog.create();
-                            // Setting OK Button
-                            alertDialog.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    Intent i = new Intent(activity, LoginActivity.class);
-                                    i.putExtra(Constant.FROM, "tracker");
-                                    activity.startActivity(i);
-                                }
-                            });
-                            alertDialog.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    if (active == homeFragment) {
-                                        bottomNavigationView.setItemActiveIndex(0);
-                                    }
-                                    if (active == categoryFragment) {
-                                        bottomNavigationView.setItemActiveIndex(1);
-                                    }
-                                    if (active == favoriteFragment) {
-                                        bottomNavigationView.setItemActiveIndex(2);
-                                    }
-                                    fm.beginTransaction().show(active).commit();
-                                    alertDialog1.dismiss();
-                                }
-                            });
-                            alertDialog.show();
+                            active = homeFragment;
+                        }
+                        break;
+                    case R.id.navCategory:
+                        if (active != categoryFragment) {
+                            bottomNavigationView.getMenu().findItem(item.getItemId()).setChecked(true);
+                            if (!categoryClicked) {
+                                fm.beginTransaction().add(R.id.container, categoryFragment).show(categoryFragment).hide(active).commit();
+                                categoryClicked = true;
+                            } else {
+                                fm.beginTransaction().show(categoryFragment).hide(active).commit();
+                            }
+                            active = categoryFragment;
+                        }
+                        break;
+                    case R.id.navWishList:
+                        if (active != favoriteFragment) {
+                            bottomNavigationView.getMenu().findItem(item.getItemId()).setChecked(true);
+                            if (!favoriteClicked) {
+                                fm.beginTransaction().add(R.id.container, favoriteFragment).show(favoriteFragment).hide(active).commit();
+                                favoriteClicked = true;
+                            } else {
+                                fm.beginTransaction().show(favoriteFragment).hide(active).commit();
+                            }
+                            active = favoriteFragment;
+                        }
+                        break;
+                    case R.id.navProfile:
+                        if (active != drawerFragment) {
+                            bottomNavigationView.getMenu().findItem(item.getItemId()).setChecked(true);
+                            if (!drawerClicked) {
+                                fm.beginTransaction().add(R.id.container, drawerFragment).show(drawerFragment).hide(active).commit();
+                                drawerClicked = true;
+                            } else {
+                                fm.beginTransaction().show(drawerFragment).hide(active).commit();
+                            }
+                            active = drawerFragment;
                         }
                         break;
                 }
@@ -246,16 +196,16 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
                 bottomNavigationView.setVisibility(View.GONE);
                 ApiConfig.getCartItemCount(activity, session);
                 Fragment fragment = new AddressListFragment();
-                Bundle bundle = new Bundle();
-                bundle.putString(Constant.FROM, "process");
-                bundle.putDouble("total", Double.parseDouble(ApiConfig.StringFormat("" + Constant.FLOAT_TOTAL_AMOUNT)));
-                fragment.setArguments(bundle);
+                Bundle bundle00 = new Bundle();
+                bundle00.putString(Constant.FROM, "login");
+                bundle00.putDouble("total", Double.parseDouble(ApiConfig.StringFormat("" + Constant.FLOAT_TOTAL_AMOUNT)));
+                fragment.setArguments(bundle00);
                 fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
                 break;
             case "share":
                 Fragment fragment0 = new ProductDetailFragment();
                 Bundle bundle0 = new Bundle();
-                bundle0.putInt("vpos", getIntent().getIntExtra("vpos", 0));
+                bundle0.putInt("variantPosition", getIntent().getIntExtra("variantPosition", 0));
                 bundle0.putString("id", getIntent().getStringExtra("id"));
                 bundle0.putString(Constant.FROM, "share");
                 fragment0.setArguments(bundle0);
@@ -264,7 +214,7 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
             case "product":
                 Fragment fragment1 = new ProductDetailFragment();
                 Bundle bundle1 = new Bundle();
-                bundle1.putInt("vpos", getIntent().getIntExtra("vpos", 0));
+                bundle1.putInt("variantPosition", getIntent().getIntExtra("variantPosition", 0));
                 bundle1.putString("id", getIntent().getStringExtra("id"));
                 bundle1.putString(Constant.FROM, "product");
                 fragment1.setArguments(bundle1);
@@ -287,6 +237,9 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
                 fragment3.setArguments(bundle3);
                 fm.beginTransaction().add(R.id.container, fragment3).addToBackStack(null).commit();
                 break;
+            case "tracker":
+                fm.beginTransaction().add(R.id.container, new TrackOrderFragment()).addToBackStack(null).commit();
+                break;
             case "payment_success":
                 fm.beginTransaction().add(R.id.container, new OrderPlacedFragment()).addToBackStack(null).commit();
                 break;
@@ -295,37 +248,30 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
                 break;
         }
 
-        fm.addOnBackStackChangedListener(new FragmentManager.OnBackStackChangedListener() {
-            @Override
-            public void onBackStackChanged() {
-                ApiConfig.updateNavItemCounter(DrawerActivity.navigationView, R.id.menu_transaction_history, Session.getCount(Constant.UNREAD_TRANSACTION_COUNT, getApplicationContext()));
-                ApiConfig.updateNavItemCounter(DrawerActivity.navigationView, R.id.menu_wallet_history, Session.getCount(Constant.UNREAD_WALLET_COUNT, getApplicationContext()));
-                ApiConfig.updateNavItemCounter(DrawerActivity.navigationView, R.id.menu_notifications, Session.getCount(Constant.UNREAD_NOTIFICATION_COUNT, getApplicationContext()));
-                toolbar.setVisibility(View.VISIBLE);
-                Fragment currentFragment = fm.findFragmentById(R.id.container);
-                currentFragment.onResume();
-            }
+        fm.addOnBackStackChangedListener(() -> {
+            toolbar.setVisibility(View.VISIBLE);
+            Fragment currentFragment = fm.findFragmentById(R.id.container);
+            assert currentFragment != null;
+            currentFragment.onResume();
         });
 
-        FirebaseMessaging.getInstance().getToken().addOnSuccessListener(new OnSuccessListener<String>() {
-            @Override
-            public void onSuccess(String token) {
-                if (!token.equals(session.getData(Constant.FCM_ID))) {
-                    session.setData(Constant.FCM_ID, token);
-                    Register_FCM(token);
-                }
+        FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
+            if (!token.equals(session.getData(Constant.FCM_ID))) {
+                session.setData(Constant.FCM_ID, token);
+                Register_FCM(token);
             }
         });
         GetProductsName();
     }
 
-//    public void setAppLocal(String languageCode) {
-//        Resources resources = getResources();
-//        DisplayMetrics dm = resources.getDisplayMetrics();
-//        Configuration configuration = resources.getConfiguration();
-//        configuration.setLocale(new Locale(languageCode.toLowerCase()));
-//        resources.updateConfiguration(configuration, dm);
-//    }
+    public void setAppLocal(String languageCode) {
+        Resources resources = getResources();
+        DisplayMetrics dm = resources.getDisplayMetrics();
+        Configuration configuration = resources.getConfiguration();
+        configuration.setLocale(new Locale(languageCode.toLowerCase()));
+        resources.updateConfiguration(configuration, dm);
+        bottomNavigationView.setLayoutDirection(activity.getResources().getConfiguration().getLayoutDirection());
+    }
 
     public void Register_FCM(String token) {
         Map<String, String> params = new HashMap<>();
@@ -341,7 +287,8 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
                     if (!jsonObject.getBoolean(Constant.ERROR)) {
                         session.setData(Constant.FCM_ID, token);
                     }
-                } catch (JSONException ignored) {
+                } catch (JSONException e) {
+                    e.printStackTrace();
 
                 }
 
@@ -351,13 +298,6 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
 
     @Override
     public void onBackPressed() {
-        if (drawer_layout.isDrawerOpen(navigationView))
-            drawer_layout.closeDrawers();
-        else
-            doubleBack();
-    }
-
-    public void doubleBack() {
         if (doubleBackToExitPressedOnce) {
             super.onBackPressed();
             return;
@@ -365,21 +305,14 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
         this.doubleBackToExitPressedOnce = true;
         if (fm.getBackStackEntryCount() == 0) {
             if (active != homeFragment) {
-
                 this.doubleBackToExitPressedOnce = false;
-                bottomNavigationView.setItemActiveIndex(0);
+                bottomNavigationView.setSelectedItemId(R.id.navMain);
                 homeClicked = true;
                 fm.beginTransaction().hide(active).show(homeFragment).commit();
                 active = homeFragment;
             } else {
                 Toast.makeText(this, getString(R.string.exit_msg), Toast.LENGTH_SHORT).show();
-
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        doubleBackToExitPressedOnce = false;
-                    }
-                }, 2000);
+                new Handler().postDelayed(() -> doubleBackToExitPressedOnce = false, 2000);
             }
 
         }
@@ -387,16 +320,19 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.toolbar_cart:
-                MainActivity.fm.beginTransaction().add(R.id.container, new CartFragment()).addToBackStack(null).commit();
-                break;
-            case R.id.toolbar_search:
-                MainActivity.fm.beginTransaction().add(R.id.container, new SearchFragment()).addToBackStack(null).commit();
-                break;
-            case R.id.toolbar_logout:
-                session.logoutUserConfirmation(activity);
-                break;
+        int id = item.getItemId();
+        if (id == R.id.toolbar_cart) {
+            MainActivity.fm.beginTransaction().add(R.id.container, new CartFragment()).addToBackStack(null).commit();
+        } else if (id == R.id.toolbar_search) {
+            Fragment fragment = new ProductListFragment();
+            Bundle bundle = new Bundle();
+            bundle.putString(Constant.FROM, "search");
+            bundle.putString(Constant.NAME, activity.getString(R.string.search));
+            bundle.putString(Constant.ID, "");
+            fragment.setArguments(bundle);
+            MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
+        } else if (id == R.id.toolbar_logout) {
+            session.logoutUserConfirmation(activity);
         }
         return super.onOptionsItemSelected(item);
     }
@@ -408,6 +344,7 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
         return true;
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         menu.findItem(R.id.toolbar_cart).setVisible(true);
@@ -415,20 +352,14 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
         menu.findItem(R.id.toolbar_cart).setIcon(ApiConfig.buildCounterDrawable(Constant.TOTAL_CART_ITEM, activity));
 
         if (fm.getBackStackEntryCount() > 0) {
-
-            drawerToggle.onDrawerClosed(drawer_layout);
-
             toolbarTitle.setText(Constant.TOOLBAR_TITLE);
             bottomNavigationView.setVisibility(View.GONE);
-            imageMenu.setImageDrawable(getResources().getDrawable(R.drawable.ic_arrow_back));
-            cardViewHamburger.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    fm.popBackStack();
-                }
-            });
-            lockDrawer();
 
+            cardViewHamburger.setCardBackgroundColor(getColor(R.color.colorPrimaryLight));
+            imageMenu.setOnClickListener(v -> fm.popBackStack());
+
+            imageMenu.setVisibility(View.VISIBLE);
+            imageHome.setVisibility(View.GONE);
         } else {
             if (session.getBoolean(Constant.IS_USER_LOGIN)) {
                 toolbarTitle.setText(getString(R.string.hi) + session.getData(Constant.NAME) + "!");
@@ -436,62 +367,22 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
                 toolbarTitle.setText(getString(R.string.hi_user));
             }
             bottomNavigationView.setVisibility(View.VISIBLE);
-            imageMenu.setImageDrawable(getResources().getDrawable(R.drawable.ic_menu));
-            cardViewHamburger.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    drawer_layout.openDrawer(GravityCompat.START);
-                }
-            });
-            unLockDrawer();
+            cardViewHamburger.setCardBackgroundColor(getColor(R.color.transparent));
+            imageMenu.setVisibility(View.GONE);
+            imageHome.setVisibility(View.VISIBLE);
         }
 
         invalidateOptionsMenu();
         return super.onPrepareOptionsMenu(menu);
     }
 
-    public void lockDrawer() {
-        ((DrawerLayout) findViewById(R.id.drawer_layout)).requestDisallowInterceptTouchEvent(true);
-        drawer_layout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
-    }
-
-    public void unLockDrawer() {
-        ((DrawerLayout) findViewById(R.id.drawer_layout)).requestDisallowInterceptTouchEvent(false);
-        ((DrawerLayout) findViewById(R.id.drawer_layout)).setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED);
-    }
-
+    @SuppressWarnings("deprecation")
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-
         super.onActivityResult(requestCode, resultCode, data);
         Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.container);
-        fragment.onActivityResult(requestCode, resultCode, data);
+        Objects.requireNonNull(fragment).onActivityResult(requestCode, resultCode, data);
 
-    }
-
-    @Override
-    public void onPaymentSuccess(String razorpayPaymentID) {
-        try {
-            if (WalletTransactionFragment.payFromWallet) {
-                WalletTransactionFragment.payFromWallet = false;
-                new WalletTransactionFragment().AddWalletBalance(activity, new Session(activity), WalletTransactionFragment.amount, WalletTransactionFragment.msg, razorpayPaymentID);
-            } else {
-                PaymentFragment.razorPayId = razorpayPaymentID;
-                new PaymentFragment().PlaceOrder(MainActivity.this, PaymentFragment.paymentMethod, PaymentFragment.razorPayId, true, PaymentFragment.sendparams, Constant.SUCCESS);
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "onPaymentSuccess  ", e);
-        }
-    }
-
-    @Override
-    public void onPaymentError(int code, String response) {
-        try {
-
-            Toast.makeText(activity, getString(R.string.order_cancel), Toast.LENGTH_LONG).show();
-        } catch (Exception e) {
-            Log.d(TAG, "onPaymentError  ", e);
-        }
     }
 
     public void GetProductsName() {
@@ -505,13 +396,37 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
                     if (!jsonObject.getBoolean(Constant.ERROR)) {
                         session.setData(Constant.GET_ALL_PRODUCTS_NAME, jsonObject.getString(Constant.DATA));
                     }
-                } catch (JSONException ignored) {
+                } catch (JSONException e) {
+                    e.printStackTrace();
 
                 }
 
             }
         }, activity, Constant.GET_ALL_PRODUCTS_URL, params, false);
     }
+
+    @Override
+    public void onPaymentSuccess(String razorpayPaymentID) {
+        try {
+                WalletTransactionFragment.payFromWallet = false;
+                new WalletTransactionFragment().AddWalletBalance(activity, new Session(activity), WalletTransactionFragment.amount, WalletTransactionFragment.msg);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.d(TAG, "onPaymentSuccess  ", e);
+        }
+    }
+
+    @Override
+    public void onPaymentError(int code, String response) {
+        try {
+            Toast.makeText(activity, getString(R.string.order_cancel), Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.d(TAG, "onPaymentError  ", e);
+        }
+    }
+
 
 
     @Override
@@ -521,10 +436,37 @@ public class MainActivity extends DrawerActivity implements PaymentResultListene
     }
 
     @Override
-    protected void onResume() {
-        ApiConfig.updateNavItemCounter(DrawerActivity.navigationView, R.id.menu_transaction_history, Session.getCount(Constant.UNREAD_TRANSACTION_COUNT, getApplicationContext()));
-        ApiConfig.updateNavItemCounter(DrawerActivity.navigationView, R.id.menu_wallet_history, Session.getCount(Constant.UNREAD_WALLET_COUNT, getApplicationContext()));
-        ApiConfig.updateNavItemCounter(DrawerActivity.navigationView, R.id.menu_notifications, Session.getCount(Constant.UNREAD_NOTIFICATION_COUNT, getApplicationContext()));
-        super.onResume();
+    public void onTransactionResponse(Bundle bundle) {
+
+    }
+
+    @Override
+    public void networkNotAvailable() {
+        Toast.makeText(activity, "Network error", Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void clientAuthenticationFailed(String s) {
+        Toast.makeText(activity, s, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void someUIErrorOccurred(String s) {
+        Toast.makeText(activity, s, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onErrorLoadingWebPage(int i, String s, String s1) {
+        Toast.makeText(activity, s, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onBackPressedCancelTransaction() {
+        Toast.makeText(activity, "Back Pressed", Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onTransactionCancel(String s, Bundle bundle) {
+        Toast.makeText(activity, s + bundle.toString(), Toast.LENGTH_LONG).show();
     }
 }

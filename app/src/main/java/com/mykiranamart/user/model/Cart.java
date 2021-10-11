@@ -1,19 +1,16 @@
 package com.mykiranamart.user.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Cart {
+public class Cart implements Serializable {
 
-    String id, user_id, product_id, product_variant_id, qty, date_created, ready_to_cart;
+    String id;
+    String user_id;
+    String product_id;
+    String product_variant_id;
+    String qty;
     ArrayList<CartItems> item;
-
-    public String getReady_to_cart() {
-        return ready_to_cart;
-    }
-
-    public void setReady_to_cart(String ready_to_cart) {
-        this.ready_to_cart = ready_to_cart;
-    }
 
     public String getId() {
         return id;
@@ -43,24 +40,12 @@ public class Cart {
         return product_variant_id;
     }
 
-    public void setProduct_variant_id(String product_variant_id) {
-        this.product_variant_id = product_variant_id;
-    }
-
     public String getQty() {
         return qty;
     }
 
     public void setQty(String qty) {
         this.qty = qty;
-    }
-
-    public String getDate_created() {
-        return date_created;
-    }
-
-    public void setDate_created(String date_created) {
-        this.date_created = date_created;
     }
 
     public ArrayList<CartItems> getItems() {

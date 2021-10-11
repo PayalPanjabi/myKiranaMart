@@ -1,7 +1,11 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -25,9 +29,6 @@ import java.util.Map;
 import com.mykiranamart.user.R;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
-import com.mykiranamart.user.helper.VolleyCallback;
-
-import static android.content.Context.INPUT_METHOD_SERVICE;
 
 public class WebViewFragment extends Fragment {
     public ProgressBar prgLoading;
@@ -43,12 +44,22 @@ public class WebViewFragment extends Fragment {
         root = inflater.inflate(R.layout.fragment_web_view, container, false);
         setHasOptionsMenu(true);
         activity = getActivity();
+        assert getArguments() != null;
         type = getArguments().getString("type");
 
         prgLoading = root.findViewById(R.id.prgLoading);
         mWebView = root.findViewById(R.id.webView1);
         mWebView.getSettings().setJavaScriptEnabled(true);
-        mWebView.setWebViewClient(new WebViewClient());
+        mWebView.setWebViewClient(new WebViewClient(){
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url != null) {
+                    view.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        });
         try {
             if (ApiConfig.isConnected(activity)) {
                 switch (type) {
@@ -68,7 +79,7 @@ public class WebViewFragment extends Fragment {
                 activity.invalidateOptionsMenu();
             }
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
 
         return root;
@@ -81,29 +92,26 @@ public class WebViewFragment extends Fragment {
         params.put(Constant.SETTINGS, Constant.GetVal);
         params.put(type, Constant.GetVal);
 
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject obj = new JSONObject(response);
-                        if (!obj.getBoolean(Constant.ERROR)) {
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject obj = new JSONObject(response);
+                    if (!obj.getBoolean(Constant.ERROR)) {
 
-                            String privacyStr = obj.getString(key);
-                            mWebView.setVerticalScrollBarEnabled(true);
-                            mWebView.loadDataWithBaseURL("", privacyStr, "text/html", "UTF-8", "");
-
-                            prgLoading.setVisibility(View.GONE);
-                        } else {
-                            prgLoading.setVisibility(View.GONE);
-                            Toast.makeText(getContext(), obj.getString(Constant.MESSAGE), Toast.LENGTH_LONG).show();
-                        }
-                        prgLoading.setVisibility(View.GONE);
-                    } catch (JSONException e) {
+                        String privacyStr = obj.getString(key);
+                        mWebView.setVerticalScrollBarEnabled(true);
+                        mWebView.loadDataWithBaseURL("", privacyStr, "text/html", "UTF-8", "");
 
                         prgLoading.setVisibility(View.GONE);
-
+                    } else {
+                        prgLoading.setVisibility(View.GONE);
+                        Toast.makeText(activity, obj.getString(Constant.MESSAGE), Toast.LENGTH_LONG).show();
                     }
+                    prgLoading.setVisibility(View.GONE);
+                } catch (JSONException e) {
+
+                    prgLoading.setVisibility(View.GONE);
+
                 }
             }
         }, activity, Constant.SETTING_URL, params, false);
@@ -112,6 +120,7 @@ public class WebViewFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        assert getArguments() != null;
         Constant.TOOLBAR_TITLE = getArguments().getString("type");
         activity.invalidateOptionsMenu();
         hideKeyboard();
@@ -123,12 +132,13 @@ public class WebViewFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         menu.findItem(R.id.toolbar_cart).setVisible(false);
         menu.findItem(R.id.toolbar_search).setVisible(false);
         menu.findItem(R.id.toolbar_search).setVisible(false);

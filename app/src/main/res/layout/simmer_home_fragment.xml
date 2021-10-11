@@ -1,32 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_margin="@dimen/_5sdp"
     android:background="@color/bg_color"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    tools:ignore="Overdraw">
 
     <View
-        android:id="@+id/zero"
+        android:id="@+id/_zero"
         android:layout_width="match_parent"
         android:layout_height="@dimen/_35sdp"
         android:layout_alignParentTop="true"
         android:background="@color/background" />
 
     <View
-        android:id="@+id/one"
+        android:id="@+id/_one"
         android:layout_width="match_parent"
         android:layout_height="@dimen/_170sdp"
-        android:layout_below="@id/zero"
+        android:layout_below="@id/_zero"
         android:layout_marginTop="@dimen/_5sdp"
         android:background="@color/background" />
 
     <RelativeLayout
-        android:id="@+id/two"
+        android:id="@+id/_two"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/one"
+        android:layout_below="@id/_one"
         android:layout_marginTop="@dimen/_5sdp">
 
         <View
@@ -37,7 +39,6 @@
             android:padding="@dimen/_10sdp" />
 
         <View
-            android:id="@+id/tvMore"
             android:layout_width="@dimen/_60sdp"
             android:layout_height="@dimen/_25sdp"
             android:layout_alignParentEnd="true"
@@ -49,18 +50,18 @@
     </RelativeLayout>
 
     <View
-        android:id="@+id/three"
+        android:id="@+id/_three"
         android:layout_width="match_parent"
         android:layout_height="@dimen/_110sdp"
-        android:layout_below="@id/two"
+        android:layout_below="@id/_two"
         android:layout_marginTop="@dimen/_5sdp"
         android:background="@color/background" />
 
     <RelativeLayout
-        android:id="@+id/four"
+        android:id="@+id/_four"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/three"
+        android:layout_below="@id/_three"
         android:layout_marginTop="@dimen/_5sdp">
 
         <View
@@ -71,7 +72,6 @@
             android:padding="@dimen/_10sdp" />
 
         <View
-            android:id="@+id/tvMore1"
             android:layout_width="@dimen/_60sdp"
             android:layout_height="@dimen/_25sdp"
             android:layout_alignParentEnd="true"
@@ -83,18 +83,18 @@
     </RelativeLayout>
 
     <View
-        android:id="@+id/five"
+        android:id="@+id/_five"
         android:layout_width="match_parent"
         android:layout_height="@dimen/_150sdp"
-        android:layout_below="@id/four"
+        android:layout_below="@id/_four"
         android:layout_marginTop="@dimen/_5sdp"
         android:background="@color/background" />
 
     <RelativeLayout
-        android:id="@+id/six"
+        android:id="@+id/_six"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/five"
+        android:layout_below="@id/_five"
         android:layout_marginTop="@dimen/_5sdp">
 
         <View
@@ -105,7 +105,6 @@
             android:padding="@dimen/_10sdp" />
 
         <View
-            android:id="@+id/tvMore2"
             android:layout_width="@dimen/_60sdp"
             android:layout_height="@dimen/_25sdp"
             android:layout_alignParentEnd="true"
@@ -119,7 +118,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="@dimen/_150sdp"
-        android:layout_below="@id/six"
+        android:layout_below="@id/_six"
         android:layout_marginTop="@dimen/_5sdp"
         android:background="@color/background" />
 

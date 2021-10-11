@@ -1,8 +1,9 @@
 package com.mykiranamart.user.adapter;
 
+import static com.mykiranamart.user.helper.ApiConfig.toTitleCase;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
 import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,8 +24,6 @@ import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
 import com.mykiranamart.user.model.WalletTransaction;
 
-import static com.mykiranamart.user.helper.ApiConfig.toTitleCase;
-
 
 public class WalletTransactionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -33,64 +32,52 @@ public class WalletTransactionAdapter extends RecyclerView.Adapter<RecyclerView.
     public final int VIEW_TYPE_LOADING = 1;
     final Activity activity;
     final ArrayList<WalletTransaction> walletTransactions;
-    final Context context;
-    public boolean isLoading;
-    String id = "0";
 
-    public WalletTransactionAdapter(Context context, Activity activity, ArrayList<WalletTransaction> walletTransactions) {
-        this.context = context;
+    public WalletTransactionAdapter(Activity activity, ArrayList<WalletTransaction> walletTransactions) {
         this.activity = activity;
         this.walletTransactions = walletTransactions;
     }
 
-    public void add(int position, WalletTransaction item) {
-        walletTransactions.add(position, item);
-        notifyItemInserted(position);
-    }
-
-    public void setLoaded() {
-        isLoading = false;
-    }
-
+    @NonNull
     @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, final int viewType) {
-        if (viewType == VIEW_TYPE_ITEM) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.lyt_wallet_transection_list, parent, false);
-            return new TransactionHolderItems(view);
-        } else if (viewType == VIEW_TYPE_LOADING) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
-            return new ViewHolderLoading(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, final int viewType) {
+        View view;
+        switch (viewType) {
+            case (VIEW_TYPE_ITEM):
+                view = LayoutInflater.from(activity).inflate(R.layout.lyt_wallet_transection_list, parent, false);
+                return new HolderItems(view);
+            case (VIEW_TYPE_LOADING):
+                view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
+                return new ViewHolderLoading(view);
+            default:
+                throw new IllegalArgumentException("unexpected viewType: " + viewType);
         }
-
-        return null;
     }
 
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint("SetTextI18n")
     @Override
-    public void onBindViewHolder(RecyclerView.ViewHolder holderparent, final int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holderParent, final int position) {
 
-        if (holderparent instanceof TransactionHolderItems) {
-            final TransactionHolderItems holder = (TransactionHolderItems) holderparent;
+        if (holderParent instanceof HolderItems) {
+            final HolderItems holder = (HolderItems) holderParent;
             final WalletTransaction walletTransaction = walletTransactions.get(position);
-            id = walletTransaction.getId();
-
 
             holder.tvTxDateAndTime.setText(walletTransaction.getDate_created());
             holder.tvTxMessage.setText(activity.getString(R.string.hash) + walletTransaction.getOrder_id() + " " + walletTransaction.getMessage());
-            holder.tvTxAmount.setText(activity.getString(R.string.amount_) + new Session(context).getData(Constant.currency) + " " + Float.parseFloat(walletTransaction.getAmount()));
+            holder.tvTxAmount.setText(activity.getString(R.string.amount_) + new Session(activity).getData(Constant.currency) + " " + Float.parseFloat(walletTransaction.getAmount()));
             holder.tvTxNo.setText(activity.getString(R.string.hash) + walletTransaction.getId());
-            holder.tvTxStatus.setText(toTitleCase(walletTransaction.getStatus()));
+            holder.tvTxStatus.setText(toTitleCase(walletTransaction.getType()));
 
-            if (walletTransaction.getStatus().equalsIgnoreCase(Constant.CREDIT)) {
+            if (walletTransaction.getType().equalsIgnoreCase(Constant.CREDIT)) {
                 holder.cardViewTxStatus.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.tx_success_bg));
             } else {
                 holder.cardViewTxStatus.setCardBackgroundColor(ContextCompat.getColor(activity, R.color.tx_fail_bg));
             }
 
-        } else if (holderparent instanceof ViewHolderLoading) {
-            ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderparent;
+        } else if (holderParent instanceof ViewHolderLoading) {
+            ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderParent;
             loadingViewHolder.progressBar.setIndeterminate(true);
         }
     }
@@ -114,7 +101,7 @@ public class WalletTransactionAdapter extends RecyclerView.Adapter<RecyclerView.
             return position;
     }
 
-    class ViewHolderLoading extends RecyclerView.ViewHolder {
+    static class ViewHolderLoading extends RecyclerView.ViewHolder {
         public final ProgressBar progressBar;
 
         public ViewHolderLoading(View view) {
@@ -123,7 +110,7 @@ public class WalletTransactionAdapter extends RecyclerView.Adapter<RecyclerView.
         }
     }
 
-    public class TransactionHolderItems extends RecyclerView.ViewHolder {
+    public static class HolderItems extends RecyclerView.ViewHolder {
 
         final TextView tvTxNo;
         final TextView tvTxDateAndTime;
@@ -132,7 +119,7 @@ public class WalletTransactionAdapter extends RecyclerView.Adapter<RecyclerView.
         final TextView tvTxStatus;
         final CardView cardViewTxStatus;
 
-        public TransactionHolderItems(@NonNull View itemView) {
+        public HolderItems(@NonNull View itemView) {
             super(itemView);
 
             tvTxNo = itemView.findViewById(R.id.tvTxNo);

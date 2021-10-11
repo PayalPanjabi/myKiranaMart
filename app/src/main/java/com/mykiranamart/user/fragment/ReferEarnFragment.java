@@ -1,5 +1,8 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.CLIPBOARD_SERVICE;
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ClipData;
@@ -22,13 +25,10 @@ import com.mykiranamart.user.R;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
 
-import static android.content.Context.CLIPBOARD_SERVICE;
-import static android.content.Context.INPUT_METHOD_SERVICE;
-
 
 public class ReferEarnFragment extends Fragment {
     View root;
-    TextView txtrefercoin, txtcode, txtcopy, txtinvite;
+    TextView edtReferCoin, edtCode, edtCopy, edtInvite;
     Session session;
     String preText = "";
     Activity activity;
@@ -42,49 +42,43 @@ public class ReferEarnFragment extends Fragment {
         setHasOptionsMenu(true);
 
 
-        session = new Session(getContext());
-        txtrefercoin = root.findViewById(R.id.txtrefercoin);
+        session = new Session(activity);
+        edtReferCoin = root.findViewById(R.id.edtReferCoin);
         if (session.getData(Constant.refer_earn_method).equals("rupees")) {
             preText = session.getData(Constant.currency) + session.getData(Constant.refer_earn_bonus);
         } else {
             preText = session.getData(Constant.refer_earn_bonus) + "% ";
         }
-        txtrefercoin.setText(getString(R.string.refer_text_1) + preText + getString(R.string.refer_text_2) + session.getData(Constant.currency) + session.getData(Constant.min_refer_earn_order_amount) + getString(R.string.refer_text_3) + session.getData(Constant.currency) + session.getData(Constant.max_refer_earn_amount) + ".");
-        txtcode = root.findViewById(R.id.txtcode);
-        txtcopy = root.findViewById(R.id.txtcopy);
-        txtinvite = root.findViewById(R.id.txtinvite);
+        edtReferCoin.setText(getString(R.string.refer_text_1) + preText + getString(R.string.refer_text_2) + session.getData(Constant.currency) + session.getData(Constant.min_refer_earn_order_amount) + getString(R.string.refer_text_3) + session.getData(Constant.currency) + session.getData(Constant.max_refer_earn_amount) + ".");
+        edtCode = root.findViewById(R.id.edtCode);
+        edtCopy = root.findViewById(R.id.edtCopy);
+        edtInvite = root.findViewById(R.id.edtInvite);
 
-        txtinvite.setCompoundDrawablesWithIntrinsicBounds(AppCompatResources.getDrawable(getContext(), R.drawable.ic_share), null, null, null);
-        txtcode.setText(session.getData(Constant.REFERRAL_CODE));
-        txtcopy.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        edtInvite.setCompoundDrawablesWithIntrinsicBounds(AppCompatResources.getDrawable(activity, R.drawable.ic_share), null, null, null);
+        edtCode.setText(session.getData(Constant.REFERRAL_CODE));
+        edtCopy.setOnClickListener(v -> {
 
-                ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(CLIPBOARD_SERVICE);
-                ClipData clip = ClipData.newPlainText("label", txtcode.getText());
-                clipboard.setPrimaryClip(clip);
-                Toast.makeText(getContext(), R.string.refer_code_copied, Toast.LENGTH_SHORT).show();
-            }
+            ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("label", edtCode.getText());
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(activity, R.string.refer_code_copied, Toast.LENGTH_SHORT).show();
         });
 
-        txtinvite.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (!txtcode.getText().toString().equals("code")) {
-                    try {
-                        Intent shareIntent = new Intent(android.content.Intent.ACTION_SEND);
-                        shareIntent.setType("text/plain");
-                        shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "");
-                        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, getString(R.string.refer_share_msg_1)
-                                + getResources().getString(R.string.app_name) + getString(R.string.refer_share_msg_2)
-                                + "\n " + Constant.WebsiteUrl + "refer/" + txtcode.getText().toString());
-                        startActivity(Intent.createChooser(shareIntent, getString(R.string.invite_frnd_title)));
-                    } catch (Exception e) {
-
-                    }
-                } else {
-                    Toast.makeText(getContext(), getString(R.string.refer_code_alert_msg), Toast.LENGTH_SHORT).show();
+        edtInvite.setOnClickListener(view -> {
+            if (!edtCode.getText().toString().equals("code")) {
+                try {
+                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                    shareIntent.setType("text/plain");
+                    shareIntent.putExtra(Intent.EXTRA_SUBJECT, "");
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, getString(R.string.refer_share_msg_1)
+                            + getResources().getString(R.string.app_name) + getString(R.string.refer_share_msg_2)
+                            + "\n " + Constant.WebsiteUrl + "refer/" + edtCode.getText().toString());
+                    startActivity(Intent.createChooser(shareIntent, getString(R.string.invite_friend_title)));
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
+            } else {
+                Toast.makeText(activity, getString(R.string.refer_code_alert_msg), Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -94,7 +88,7 @@ public class ReferEarnFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        Constant.TOOLBAR_TITLE = getString(R.string.refere);
+        Constant.TOOLBAR_TITLE = getString(R.string.refer_and_earn);
         activity.invalidateOptionsMenu();
         hideKeyboard();
     }
@@ -105,12 +99,13 @@ public class ReferEarnFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         menu.findItem(R.id.toolbar_cart).setVisible(false);
         menu.findItem(R.id.toolbar_search).setVisible(false);
         menu.findItem(R.id.toolbar_sort).setVisible(false);

@@ -1,5 +1,7 @@
 package com.mykiranamart.user.fragment;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
+
 import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
@@ -22,13 +24,11 @@ import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.model.Slider;
 
-import static android.content.Context.INPUT_METHOD_SERVICE;
-
 
 public class FullScreenViewFragment extends Fragment {
     View root;
     int pos;
-    ArrayList<Slider> imglist;
+    ArrayList<Slider> imageList;
     LinearLayout mMarkersLayout;
     ViewPager viewPager;
     Activity activity;
@@ -43,16 +43,16 @@ public class FullScreenViewFragment extends Fragment {
         viewPager = root.findViewById(R.id.pager);
 
         activity = getActivity();
-        context = getContext();
-
+        context = activity;
 
         setHasOptionsMenu(true);
 
-        imglist = new ArrayList<>();
-        imglist = ProductDetailFragment.sliderArrayList;
+        imageList = new ArrayList<>();
+        imageList = ProductDetailFragment.sliderArrayList;
+        assert getArguments() != null;
         pos = getArguments().getInt("pos", 0);
 
-        viewPager.setAdapter(new SliderAdapter(imglist, activity, R.layout.lyt_fullscreenimg, "fullscreen"));
+        viewPager.setAdapter(new SliderAdapter(imageList, activity, R.layout.lyt_fullscreenimg, "fullscreen"));
         viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(int i, float v, int i1) {
@@ -60,7 +60,7 @@ public class FullScreenViewFragment extends Fragment {
 
             @Override
             public void onPageSelected(int position) {
-                ApiConfig.addMarkers(position, imglist, mMarkersLayout, context);
+                ApiConfig.addMarkers(position, imageList, mMarkersLayout, context);
             }
 
             @Override
@@ -69,7 +69,7 @@ public class FullScreenViewFragment extends Fragment {
         });
 
         viewPager.setCurrentItem(pos);
-        ApiConfig.addMarkers(pos, imglist, mMarkersLayout, context);
+        ApiConfig.addMarkers(pos, imageList, mMarkersLayout, context);
 
 
         return root;
@@ -89,12 +89,13 @@ public class FullScreenViewFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.toolbar_cart).setVisible(true);
         menu.findItem(R.id.toolbar_sort).setVisible(false);

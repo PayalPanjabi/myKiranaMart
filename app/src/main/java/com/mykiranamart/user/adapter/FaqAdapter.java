@@ -26,9 +26,7 @@ public class FaqAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public final int VIEW_TYPE_LOADING = 1;
     final Activity activity;
     final ArrayList<Faq> faqs;
-    public boolean isLoading;
     boolean visible;
-    String id = "0";
 
 
     public FaqAdapter(Activity activity, ArrayList<Faq> faqs) {
@@ -37,38 +35,31 @@ public class FaqAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         visible = false;
     }
 
-    public void add(int position, Faq item) {
-        faqs.add(position, item);
-        notifyItemInserted(position);
-    }
 
-    public void setLoaded() {
-        isLoading = false;
-    }
-
+    @NonNull
     @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, final int viewType) {
-        if (viewType == VIEW_TYPE_ITEM) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.lyt_faq_list, parent, false);
-            return new FaqHolder(view);
-        } else if (viewType == VIEW_TYPE_LOADING) {
-            View view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
-            return new ViewHolderLoading(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, final int viewType) {
+        View view;
+        switch (viewType) {
+            case (VIEW_TYPE_ITEM):
+                view = LayoutInflater.from(activity).inflate(R.layout.lyt_faq_list, parent, false);
+                return new HolderItems(view);
+            case (VIEW_TYPE_LOADING):
+                view = LayoutInflater.from(activity).inflate(R.layout.item_progressbar, parent, false);
+                return new ViewHolderLoading(view);
+            default:
+                throw new IllegalArgumentException("unexpected viewType: " + viewType);
         }
-
-        return null;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint("SetTextI18n")
     @Override
-    public void onBindViewHolder(RecyclerView.ViewHolder holderparent, final int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holderParent, final int position) {
 
-        if (holderparent instanceof FaqHolder) {
-            final FaqHolder holder = (FaqHolder) holderparent;
+        if (holderParent instanceof HolderItems) {
+            final HolderItems holder = (HolderItems) holderParent;
             final Faq faq = faqs.get(position);
-
-            id = faq.getId();
 
             if (!faq.getQuestion().trim().isEmpty() && !faq.getAnswer().trim().isEmpty()) {
                 holder.tvQue.setText(faq.getQuestion());
@@ -77,21 +68,18 @@ public class FaqAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             } else {
                 holder.mainLyt.setVisibility(View.GONE);
             }
-            holder.mainLyt.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (visible) {
-                        visible = false;
-                        holder.tvAns.setVisibility(View.GONE);
-                    } else {
-                        visible = true;
-                        holder.tvAns.setVisibility(View.VISIBLE);
-                    }
+            holder.mainLyt.setOnClickListener(v -> {
+                if (visible) {
+                    visible = false;
+                    holder.tvAns.setVisibility(View.GONE);
+                } else {
+                    visible = true;
+                    holder.tvAns.setVisibility(View.VISIBLE);
                 }
             });
 
-        } else if (holderparent instanceof ViewHolderLoading) {
-            ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderparent;
+        } else if (holderParent instanceof ViewHolderLoading) {
+            ViewHolderLoading loadingViewHolder = (ViewHolderLoading) holderParent;
             loadingViewHolder.progressBar.setIndeterminate(true);
         }
     }
@@ -120,14 +108,14 @@ public class FaqAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
     }
 
-    class FaqHolder extends RecyclerView.ViewHolder {
+    static class HolderItems extends RecyclerView.ViewHolder {
 
         final TextView tvQue;
         final TextView tvAns;
         final RelativeLayout mainLyt;
 
 
-        public FaqHolder(@NonNull View itemView) {
+        public HolderItems(@NonNull View itemView) {
             super(itemView);
 
             tvQue = itemView.findViewById(R.id.tvQue);

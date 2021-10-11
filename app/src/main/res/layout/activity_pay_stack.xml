@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/bg_color"
+    tools:ignore="Overdraw">
 
     <include layout="@layout/lyt_toolbar" />
 
@@ -28,14 +31,15 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/_15sdp"
                     android:layout_marginBottom="@dimen/_15sdp"
+                    android:contentDescription="@string/app_name"
                     android:src="@mipmap/ic_launcher" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
                     android:layout_margin="@dimen/_10sdp"
                     android:text="@string/total_"
+                    android:textAlignment="center"
                     android:textAppearance="@style/TextAppearance.AppCompat.Large"
                     android:textColor="@color/black" />
 
@@ -43,8 +47,7 @@
                     android:id="@+id/tvPayable"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:gravity="end"
+                    android:textAlignment="center"
                     android:textAppearance="@style/TextAppearance.AppCompat.Large"
                     android:textColor="@color/black"
                     android:textStyle="bold" />
@@ -83,6 +86,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:baselineAligned="false"
                 android:orientation="horizontal"
                 android:weightSum="3">
 
@@ -98,7 +102,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingStart="8dp"
-                        android:text="@string/expiry" />
+                        android:paddingEnd="8dp"
+                        android:text="@string/expiry"
+                        android:textAlignment="viewStart" />
 
                     <!-- EditText for expiry month -->
                     <LinearLayout
@@ -128,10 +134,10 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_gravity="center_vertical"
                             android:layout_marginStart="@dimen/_10sdp"
                             android:layout_marginEnd="@dimen/_10sdp"
-                            android:text="/"
+                            android:text="@string/slash"
+                            android:textAlignment="viewStart"
                             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
                             android:textColor="@color/dark_gray" />
                         <!-- EditText for expiry year -->
@@ -166,7 +172,9 @@
                         android:layout_height="wrap_content"
                         android:hint="@string/cvv"
                         android:paddingStart="8dp"
-                        android:text="@string/cvv" />
+                        android:paddingEnd="8dp"
+                        android:text="@string/cvv"
+                        android:textAlignment="viewStart" />
 
                     <!-- EditText for cvv -->
                     <EditText
@@ -190,16 +198,16 @@
 
     <!--Pay Button -->
     <Button
+        android:id="@+id/btnPay"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentBottom="true"
         android:layout_centerVertical="true"
         android:background="@color/colorAccent"
-        android:onClick="PayButton"
         android:text="@string/pay"
         android:textAllCaps="true"
-        android:textColor="#fff"
+        android:textColor="@color/white"
         android:textSize="20sp" />
 
 </RelativeLayout>

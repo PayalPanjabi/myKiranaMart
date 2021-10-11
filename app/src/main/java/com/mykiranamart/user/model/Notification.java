@@ -1,6 +1,8 @@
 package com.mykiranamart.user.model;
 
-public class Notification {
+import java.io.Serializable;
+
+public class Notification implements Serializable {
 
     String id, name, subtitle, type, type_id, image;
 
@@ -22,10 +24,6 @@ public class Notification {
 
     public String getSubtitle() {
         return subtitle;
-    }
-
-    public void setSubtitle(String subtitle) {
-        this.subtitle = subtitle;
     }
 
     public String getType() {

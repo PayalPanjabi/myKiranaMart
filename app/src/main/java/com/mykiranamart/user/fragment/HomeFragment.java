@@ -17,8 +17,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentStatePagerAdapter;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -26,6 +29,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.viewpager.widget.ViewPager;
 
 import com.facebook.shimmer.ShimmerFrameLayout;
+import com.google.android.material.tabs.TabLayout;
 import com.google.gson.Gson;
 
 import org.json.JSONArray;
@@ -47,9 +51,9 @@ import com.mykiranamart.user.adapter.SliderAdapter;
 import com.mykiranamart.user.helper.ApiConfig;
 import com.mykiranamart.user.helper.Constant;
 import com.mykiranamart.user.helper.Session;
-import com.mykiranamart.user.helper.VolleyCallback;
 import com.mykiranamart.user.model.Category;
 import com.mykiranamart.user.model.Slider;
+
 
 
 public class HomeFragment extends Fragment {
@@ -62,20 +66,20 @@ public class HomeFragment extends Fragment {
     SwipeRefreshLayout swipeLayout;
     View root;
     int timerDelay = 0, timerWaiting = 0;
-    EditText searchview;
+    EditText searchView;
     RecyclerView categoryRecyclerView, sectionView, offerView;
-    ViewPager mPager;
+    TabLayout tabLayout;
+    ViewPager mPager, viewPager;
     LinearLayout mMarkersLayout;
     int size;
     Timer swipeTimer;
     Handler handler;
     Runnable Update;
     int currentPage = 0;
-    LinearLayout lytCategory, lytSearchview;
+    LinearLayout lytCategory, lytSearchView;
     Menu menu;
-    TextView tvMore;
+    TextView tvMore, tvMoreFlashSale;
     boolean searchVisible = false;
-    private ArrayList<String> offerList;
     private ShimmerFrameLayout mShimmerViewContainer;
 
     @SuppressLint("ClickableViewAccessibility")
@@ -83,8 +87,8 @@ public class HomeFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         root = inflater.inflate(R.layout.fragment_home, container, false);
-        session = new Session(getContext());
         activity = getActivity();
+        session = new Session(activity);
 
         timerDelay = 3000;
         timerWaiting = 3000;
@@ -92,67 +96,86 @@ public class HomeFragment extends Fragment {
 
         swipeLayout = root.findViewById(R.id.swipeLayout);
 
-        categoryRecyclerView = root.findViewById(R.id.categoryrecycleview);
+        categoryRecyclerView = root.findViewById(R.id.categoryRecyclerView);
 
         sectionView = root.findViewById(R.id.sectionView);
-        sectionView.setLayoutManager(new LinearLayoutManager(getContext()));
+        sectionView.setLayoutManager(new LinearLayoutManager(activity));
         sectionView.setNestedScrollingEnabled(false);
 
         offerView = root.findViewById(R.id.offerView);
-        offerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        offerView.setLayoutManager(new LinearLayoutManager(activity));
         offerView.setNestedScrollingEnabled(false);
+
+        tabLayout = root.findViewById(R.id.tabLayout);
+        viewPager = root.findViewById(R.id.viewPager);
 
         nestedScrollView = root.findViewById(R.id.nestedScrollView);
         mMarkersLayout = root.findViewById(R.id.layout_markers);
         lytCategory = root.findViewById(R.id.lytCategory);
-        lytSearchview = root.findViewById(R.id.lytSearchview);
+        lytSearchView = root.findViewById(R.id.lytSearchView);
+        lytSearchView = root.findViewById(R.id.lytSearchView);
+        tvMoreFlashSale = root.findViewById(R.id.tvMoreFlashSale);
         tvMore = root.findViewById(R.id.tvMore);
         mShimmerViewContainer = root.findViewById(R.id.mShimmerViewContainer);
 
-        searchview = root.findViewById(R.id.searchview);
+        searchView = root.findViewById(R.id.searchView);
 
         if (nestedScrollView != null) {
-            nestedScrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
-                @Override
-                public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-                    Rect scrollBounds = new Rect();
-                    nestedScrollView.getHitRect(scrollBounds);
-                    if (!lytSearchview.getLocalVisibleRect(scrollBounds) || scrollBounds.height() < lytSearchview.getHeight()) {
-                        searchVisible = true;
-                        menu.findItem(R.id.toolbar_search).setVisible(true);
-                    } else {
-                        searchVisible = false;
-                        menu.findItem(R.id.toolbar_search).setVisible(false);
-                    }
-                    activity.invalidateOptionsMenu();
+            nestedScrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+                Rect scrollBounds = new Rect();
+                nestedScrollView.getHitRect(scrollBounds);
+                if (!lytSearchView.getLocalVisibleRect(scrollBounds) || scrollBounds.height() > lytSearchView.getHeight()) {
+                    searchVisible = true;
+                    menu.findItem(R.id.toolbar_search).setVisible(true);
+                } else {
+                    searchVisible = false;
+                    menu.findItem(R.id.toolbar_search).setVisible(false);
                 }
+                activity.invalidateOptionsMenu();
             });
         }
 
-        tvMore.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (!MainActivity.categoryClicked) {
-                    MainActivity.fm.beginTransaction().add(R.id.container, MainActivity.categoryFragment).show(MainActivity.categoryFragment).hide(MainActivity.active).commit();
-                    MainActivity.categoryClicked = true;
-                } else {
-                    MainActivity.fm.beginTransaction().show(MainActivity.categoryFragment).hide(MainActivity.active).commit();
-                }
-                MainActivity.bottomNavigationView.setItemActiveIndex(1);
-                MainActivity.active = MainActivity.categoryFragment;
+        tvMore.setOnClickListener(v -> {
+            if (!MainActivity.categoryClicked) {
+                MainActivity.fm.beginTransaction().add(R.id.container, MainActivity.categoryFragment).show(MainActivity.categoryFragment).hide(MainActivity.active).commit();
+                MainActivity.categoryClicked = true;
+            } else {
+                MainActivity.fm.beginTransaction().show(MainActivity.categoryFragment).hide(MainActivity.active).commit();
             }
+            MainActivity.bottomNavigationView.setSelectedItemId(R.id.navCategory);
+            MainActivity.active = MainActivity.categoryFragment;
         });
 
-        searchview.setOnTouchListener((View v, MotionEvent event) -> {
-            MainActivity.fm.beginTransaction().add(R.id.container, new SearchFragment()).addToBackStack(null).commit();
+        tvMoreFlashSale.setOnClickListener(v -> {
+            Fragment fragment = new ProductListFragment();
+            Bundle bundle = new Bundle();
+            bundle.putString("id", "");
+            bundle.putString("cat_id", "");
+            bundle.putString(Constant.FROM, "flash_sale_all");
+            bundle.putString("name", activity.getString(R.string.flash_sales));
+            fragment.setArguments(bundle);
+            MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
+        });
+
+        searchView.setOnTouchListener((View v, MotionEvent event) -> {
+            Fragment fragment = new ProductListFragment();
+            Bundle bundle = new Bundle();
+            bundle.putString(Constant.FROM, "search");
+            bundle.putString(Constant.NAME, activity.getString(R.string.search));
+            bundle.putString(Constant.ID, "");
+            fragment.setArguments(bundle);
+            MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
             return false;
         });
 
-        lytSearchview.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                MainActivity.fm.beginTransaction().add(R.id.container, new SearchFragment()).addToBackStack(null).commit();
-            }
+        lytSearchView.setOnClickListener(v -> {
+            Fragment fragment = new ProductListFragment();
+            Bundle bundle = new Bundle();
+            bundle.putString(Constant.FROM, "search");
+            bundle.putString(Constant.NAME, activity.getString(R.string.search));
+            bundle.putString(Constant.ID, "");
+            fragment.setArguments(bundle);
+            MainActivity.fm.beginTransaction().add(R.id.container, fragment).addToBackStack(null).commit();
         });
 
         mPager = root.findViewById(R.id.pager);
@@ -163,7 +186,7 @@ public class HomeFragment extends Fragment {
 
             @Override
             public void onPageSelected(int position) {
-                ApiConfig.addMarkers(position, sliderArrayList, mMarkersLayout, getContext());
+                ApiConfig.addMarkers(position, sliderArrayList, mMarkersLayout, activity);
             }
 
             @Override
@@ -173,28 +196,22 @@ public class HomeFragment extends Fragment {
 
         categoryArrayList = new ArrayList<>();
 
-        swipeLayout.setColorSchemeColors(getResources().getColor(R.color.colorPrimary));
+        swipeLayout.setColorSchemeColors(ContextCompat.getColor(activity,R.color.colorPrimary));
 
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                if (swipeTimer != null) {
-                    swipeTimer.cancel();
-                }
-                if (ApiConfig.isConnected(getActivity())) {
-                    ApiConfig.getWalletBalance(activity, session);
-                    if (new Session(activity).getBoolean(Constant.IS_USER_LOGIN)) {
-                        ApiConfig.getWalletBalance(activity, new Session(activity));
-                    }
-                    GetHomeData();
-                }
-                swipeLayout.setRefreshing(false);
+        swipeLayout.setOnRefreshListener(() -> {
+            if (swipeTimer != null) {
+                swipeTimer.cancel();
             }
+            if (ApiConfig.isConnected(getActivity())) {
+                    ApiConfig.getWalletBalance(activity, new Session(activity));
+                GetHomeData();
+            }
+            swipeLayout.setRefreshing(false);
         });
 
         if (ApiConfig.isConnected(getActivity())) {
-            GetHomeData();
             ApiConfig.getWalletBalance(activity, new Session(activity));
+            GetHomeData();
         } else {
             nestedScrollView.setVisibility(View.VISIBLE);
             mShimmerViewContainer.setVisibility(View.GONE);
@@ -212,44 +229,70 @@ public class HomeFragment extends Fragment {
         if (session.getBoolean(Constant.IS_USER_LOGIN)) {
             params.put(Constant.USER_ID, session.getData(Constant.ID));
         }
-        ApiConfig.RequestToVolley(new VolleyCallback() {
-            @Override
-            public void onSuccess(boolean result, String response) {
-                if (result) {
-                    try {
-                        JSONObject jsonObject = new JSONObject(response);
-                        if (!jsonObject.getBoolean(Constant.ERROR)) {
-                            offerList = new ArrayList<>();
-                            sliderArrayList = new ArrayList<>();
-                            categoryArrayList = new ArrayList<>();
-                            sectionList = new ArrayList<>();
-
-                            offerList.clear();
-                            sliderArrayList.clear();
-                            categoryArrayList.clear();
-                            sectionList.clear();
-
-                            GetOfferImage(jsonObject.getJSONArray(Constant.OFFER_IMAGES));
-                            GetCategory(jsonObject);
-                            SectionProductRequest(jsonObject.getJSONArray(Constant.SECTIONS));
-                            GetSlider(jsonObject.getJSONArray(Constant.SLIDER_IMAGES));
-                        } else {
-                            nestedScrollView.setVisibility(View.VISIBLE);
-                            mShimmerViewContainer.setVisibility(View.GONE);
-                            mShimmerViewContainer.stopShimmer();
-                        }
-                    } catch (JSONException e) {
+        ApiConfig.RequestToVolley((result, response) -> {
+            if (result) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    if (!jsonObject.getBoolean(Constant.ERROR)) {
+                        GetOfferImage(jsonObject.getJSONArray(Constant.OFFER_IMAGES));
+                        GetFlashSale(jsonObject.getJSONArray(Constant.FLASH_SALES));
+                        GetCategory(jsonObject);
+                        SectionProductRequest(jsonObject.getJSONArray(Constant.SECTIONS));
+                        GetSlider(jsonObject.getJSONArray(Constant.SLIDER_IMAGES));
+                    } else {
                         nestedScrollView.setVisibility(View.VISIBLE);
                         mShimmerViewContainer.setVisibility(View.GONE);
                         mShimmerViewContainer.stopShimmer();
-
                     }
+                } catch (JSONException e) {
+                    nestedScrollView.setVisibility(View.VISIBLE);
+                    mShimmerViewContainer.setVisibility(View.GONE);
+                    mShimmerViewContainer.stopShimmer();
+
                 }
             }
         }, getActivity(), Constant.GET_ALL_DATA_URL, params, false);
     }
 
+    @SuppressWarnings("deprecation")
+    public void GetFlashSale(JSONArray jsonArray) {
+        try {
+            tabLayout.removeAllTabs();
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+                tabLayout.addTab(tabLayout.newTab().setText(jsonArray.getJSONObject(i).getString(Constant.TITLE)));
+            }
+
+            TabAdapter tabAdapter = new TabAdapter(MainActivity.fm, tabLayout.getTabCount(), jsonArray);
+            viewPager.setAdapter(tabAdapter);
+            viewPager.setOffscreenPageLimit(1);
+            viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
+
+            tabLayout.setOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+                @Override
+                public void onTabSelected(TabLayout.Tab tab) {
+                    viewPager.setCurrentItem(tab.getPosition());
+                }
+
+                @Override
+                public void onTabUnselected(TabLayout.Tab tab) {
+
+                }
+
+                @Override
+                public void onTabReselected(TabLayout.Tab tab) {
+
+                }
+            });
+
+//            tabLayout.setupWithViewPager(viewPager);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void GetOfferImage(JSONArray jsonArray) {
+        ArrayList<String> offerList = new ArrayList<>();
         try {
             if (jsonArray != null && jsonArray.length() > 0) {
                 for (int i = 0; i < jsonArray.length(); i++) {
@@ -259,19 +302,17 @@ public class HomeFragment extends Fragment {
                 offerView.setAdapter(new OfferAdapter(offerList, R.layout.offer_lyt));
             }
         } catch (JSONException e) {
-
+            e.printStackTrace();
         }
-
     }
 
     void GetCategory(JSONObject object) {
+        categoryArrayList = new ArrayList<>();
         try {
-            int visible_count = 0;
-            int column_count = 0;
-
+            int visible_count;
+            int column_count;
             JSONArray jsonArray = object.getJSONArray(Constant.CATEGORIES);
-
-            if (jsonArray != null && jsonArray.length() > 0) {
+            if (jsonArray.length() > 0) {
                 for (int i = 0; i < jsonArray.length(); i++) {
                     JSONObject jsonObject = jsonArray.getJSONObject(i);
                     Category category = new Gson().fromJson(jsonObject.toString(), Category.class);
@@ -282,26 +323,27 @@ public class HomeFragment extends Fragment {
                     if (object.getString("style").equals("style_1")) {
                         visible_count = Integer.parseInt(object.getString("visible_count"));
                         column_count = Integer.parseInt(object.getString("column_count"));
-                        categoryRecyclerView.setLayoutManager(new GridLayoutManager(getContext(), column_count));
-                        categoryRecyclerView.setAdapter(new CategoryAdapter(getContext(), getActivity(), categoryArrayList, R.layout.lyt_category_grid, "home", visible_count));
+                        categoryRecyclerView.setLayoutManager(new GridLayoutManager(activity, column_count));
+                        categoryRecyclerView.setAdapter(new CategoryAdapter(activity, categoryArrayList, R.layout.lyt_category_grid, "home", visible_count));
                     } else if (object.getString("style").equals("style_2")) {
                         visible_count = Integer.parseInt(object.getString("visible_count"));
-                        categoryRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-                        categoryRecyclerView.setAdapter(new CategoryAdapter(getContext(), getActivity(), categoryArrayList, R.layout.lyt_category_list, "home", visible_count));
+                        categoryRecyclerView.setLayoutManager(new LinearLayoutManager(activity, LinearLayoutManager.HORIZONTAL, false));
+                        categoryRecyclerView.setAdapter(new CategoryAdapter(activity, categoryArrayList, R.layout.lyt_category_list, "home", visible_count));
                     }
                 } else {
-                    categoryRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-                    categoryRecyclerView.setAdapter(new CategoryAdapter(getContext(), getActivity(), categoryArrayList, R.layout.lyt_category_list, "home", 6));
+                    categoryRecyclerView.setLayoutManager(new LinearLayoutManager(activity, LinearLayoutManager.HORIZONTAL, false));
+                    categoryRecyclerView.setAdapter(new CategoryAdapter(activity, categoryArrayList, R.layout.lyt_category_list, "home", 6));
                 }
             } else {
                 lytCategory.setVisibility(View.GONE);
             }
         } catch (JSONException e) {
-
+            e.printStackTrace();
         }
     }
 
     public void SectionProductRequest(JSONArray jsonArray) {  //json request for product search
+        sectionList = new ArrayList<>();
         try {
             for (int j = 0; j < jsonArray.length(); j++) {
                 Category section = new Category();
@@ -315,7 +357,7 @@ public class HomeFragment extends Fragment {
                 sectionList.add(section);
             }
             sectionView.setVisibility(View.VISIBLE);
-            SectionAdapter sectionAdapter = new SectionAdapter(getContext(), getActivity(), sectionList);
+            SectionAdapter sectionAdapter = new SectionAdapter(activity, getActivity(), sectionList);
             sectionView.setAdapter(sectionAdapter);
 
         } catch (JSONException e) {
@@ -325,6 +367,7 @@ public class HomeFragment extends Fragment {
     }
 
     void GetSlider(JSONArray jsonArray) {
+        sliderArrayList = new ArrayList<>();
         try {
             size = jsonArray.length();
             for (int i = 0; i < jsonArray.length(); i++) {
@@ -332,7 +375,7 @@ public class HomeFragment extends Fragment {
                 sliderArrayList.add(new Slider(jsonObject.getString(Constant.TYPE), jsonObject.getString(Constant.TYPE_ID), jsonObject.getString(Constant.NAME), jsonObject.getString(Constant.IMAGE)));
             }
             mPager.setAdapter(new SliderAdapter(sliderArrayList, getActivity(), R.layout.lyt_slider, "home"));
-            ApiConfig.addMarkers(0, sliderArrayList, mMarkersLayout, getContext());
+            ApiConfig.addMarkers(0, sliderArrayList, mMarkersLayout, activity);
             handler = new Handler();
             Update = () -> {
                 if (currentPage == size) {
@@ -341,7 +384,7 @@ public class HomeFragment extends Fragment {
                 try {
                     mPager.setCurrentItem(currentPage++, true);
                 } catch (Exception e) {
-
+                    e.printStackTrace();
                 }
             };
             swipeTimer = new Timer();
@@ -353,7 +396,7 @@ public class HomeFragment extends Fragment {
             }, timerDelay, timerWaiting);
 
         } catch (JSONException e) {
-
+            e.printStackTrace();
         }
         nestedScrollView.setVisibility(View.VISIBLE);
         mShimmerViewContainer.setVisibility(View.GONE);
@@ -374,17 +417,50 @@ public class HomeFragment extends Fragment {
             assert inputMethodManager != null;
             inputMethodManager.hideSoftInputFromWindow(root.getApplicationWindowToken(), 0);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     @Override
     public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        menu.findItem(R.id.toolbar_layout).setVisible(false);
         this.menu = menu;
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.toolbar_cart).setVisible(true);
         menu.findItem(R.id.toolbar_sort).setVisible(false);
         menu.findItem(R.id.toolbar_search).setVisible(searchVisible);
+    }
+
+    @SuppressWarnings("deprecation")
+    public static class TabAdapter extends FragmentStatePagerAdapter {
+
+        final int mNumOfTabs;
+        final JSONArray jsonArray;
+
+        @SuppressWarnings("deprecation")
+        public TabAdapter(FragmentManager fm, int NumOfTabs, JSONArray jsonArray) {
+            super(fm);
+            this.mNumOfTabs = NumOfTabs;
+            this.jsonArray = jsonArray;
+        }
+
+        @NonNull
+        @Override
+        public Fragment getItem(int position) {
+            Fragment fragment = null;
+            try {
+                fragment = FlashSaleFragment.AddFragment(jsonArray.getJSONObject(position));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            assert fragment != null;
+            return fragment;
+        }
+
+        @Override
+        public int getCount() {
+            return mNumOfTabs;
+        }
     }
 
 }

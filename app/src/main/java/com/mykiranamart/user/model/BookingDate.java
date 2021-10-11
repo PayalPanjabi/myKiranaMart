@@ -1,6 +1,8 @@
 package com.mykiranamart.user.model;
 
-public class BookingDate {
+import java.io.Serializable;
+
+public class BookingDate implements Serializable {
     String day, date, month, year;
 
     public String getDay() {
